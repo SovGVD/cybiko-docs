@@ -2,8 +2,8 @@
 
 The formats of Cybiko Xtreme software as it was shipped and as CyOS stores
 it: EZ Loader packs, CyOS archives (applications, libraries, video clips)
-with their compression, CyOS modules, CyOS update images and MXD video
-clips. The RAM disk's own format is in [cyos.md](cyos.md#the-ram-disk).
+with their compression, CyOS modules, CyOS update images, pictures,
+melodies and their sound envelopes, sound recordings and MXD video clips. The RAM disk's own format is in [cyos.md](cyos.md#the-ram-disk).
 
 All of it was worked out from the files on the Xtreme and MP3 cartridge
 CDs, by running them in an emulator and by disassembly. Nothing comes from
@@ -22,7 +22,11 @@ H8S. The EZ Loader pack is a PC format and is **little-endian**.
 - [CyOS modules (`main.e`)](#cyos-modules-maine)
 - [CyOS update images (`.boot`)](#cyos-update-images-boot)
 - [Pictures (`.pic`, `.xpic`)](#pictures-pic-xpic)
+- [Melodies (`.mus`, `.music`)](#melodies-mus-music)
+- [Sound envelopes (`.amp`, `.a`)](#sound-envelopes-amp-a)
+- [Recordings (`.wav`)](#recordings-wav)
 - [MXD clips](#mxd-clips)
+- [Tools](#tools)
 - [Open questions](#open-questions)
 
 ## EZ Loader packs (`.cap`, `.csu`)
@@ -241,8 +245,8 @@ the Xtreme CD): it turns a `.bmp` into a `.pic` ("Four" palette) or an
 sliders and a frame to pick the part of the picture, and turns `.pic` and
 `.xpic` back into `.bmp`. File names must be at most 40 characters and not
 start or end with `-`, `+` or `.`. (It also converts MIDI files into
-Cybiko `.music` melodies and a text description into `.amp` sounds; those
-formats are not worked out.)
+[`.music` melodies](#melodies-mus-music) and a text description into
+[`.amp` envelopes](#sound-envelopes-amp-a).)
 
 The format (**Verified**: read from Converter's load and save code, and
 pictures written this way open in Photo Viewer in an emulator):
@@ -270,10 +274,183 @@ then for each image:
 - A `.pic` can hold several images: Photo Viewer flips through them with
   Left/Right (from its manual), and `filetype.pic` in Photo Viewer holds
   two 14 x 14 icons.
+- Some applications also carry **1-bit pictures** in the same container
+  (first byte 1, eight pixels to a byte, 1 black): Run Reader's
+  `big_font.pic` holds 224 glyphs this way. Converter doesn't make them.
+- The header's width and height are the whole picture's; some files give
+  more than their images cover, so a tool rewriting a file keeps them.
 - Photo Viewer lists `*.xpic` and `*.pic` files on the Cybiko's disk and on
   the MP3 cartridge's card.
 
 A 160 x 100 `.xpic` is 8008 bytes; a `.pic` 4008.
+
+## Melodies (`.mus`, `.music`)
+
+Short tunes for the speaker: games' sound effects and title music, the
+Calculator's key clicks, CyOS's own alarms. Applications keep them as
+parts of their archive (`title.music`, `1.mus`); the two extensions are the
+same format. CyOS plays them with its melody player `mplayer.app` (in the
+flash; applications import its export 5 to load a melody by name, 1 to
+play it and 7 to drop it). Cybiko Converter makes `.music` files from MIDI
+files.
+
+(**Verified**: read from `mplayer.app`'s code and Converter's MIDI
+writer, all 225 melodies on the Xtreme CD and in CyOS's flash read this
+way, and melodies made by hand were played by `mplayer.app` in an emulator
+with the speaker's pitch and duty cycle logged.)
+
+```text
+u8      version: 0, 1 or 2 (the player refuses anything above 2)
+u8      1
+u16 BE  size of the events in bytes (even, not 0)
+version 2 only:
+  u16 BE  pulse time, microseconds
+  u8      volume, 0-255 (0x80 is the usual value)
+  u16 BE  envelope number: N.amp of mplayer.app, 0 for none
+then the events, two bytes each
+```
+
+The Xtreme CD's files are version 0 (101 files) and 2 (124); Converter
+writes version 1, which is version 0 with the other note code below.
+
+**Events** are pairs of bytes. Lengths count ticks of 10 ms (measured in an
+emulator: 40 ticks took 400 ms; whole melodies ran about 2% longer, the
+player's own time between events).
+
+| First byte | Second byte | Meaning |
+| --- | --- | --- |
+| `00`-`43` | length | note: MIDI note 41 + byte (F2 to C8). Version 0 files use these |
+| `44`-`c3` | length | note: MIDI note byte - 0x44 (0-127). Versions 1 and 2 use these |
+| `ff` | length | rest |
+| `f9` | note code | after a note: glide from it to this note over the note's length |
+| `f8` | depth | after a note: vibrato of up to *depth* semitones (0: none) |
+| `fa`-`fe` | count | start of a part to repeat; slot 0-4 |
+| `fa`-`fe` | 0 | end of the part in that slot |
+
+- **Notes** the player can sound are MIDI 29 (F1) to 127 (G9); others play
+  as its lowest tone (about 35 Hz). The player turns a note into a timer
+  period at 2.304 MHz: period = *T*[n mod 12] >> (n / 12), with *T* =
+  44ccf, 40f07, 3d4b6, 39dab, 369b7, 338ad, 30a64, 2deb4, 2b578, 28e8c,
+  269cf, 24722 (hex). A4 (69) gets 5236, 440 Hz.
+- A length of **0** counts down from 65536 ticks: the note plays for 11
+  minutes. Converter never writes 0; long notes are split into 255-tick
+  pieces.
+- A **glide** (`f9`) or **vibrato** (`f8`) pair belongs to the note before
+  it and takes no time. A glide moves the period in a straight line, one
+  step a tick. A vibrato cycles through 8 periods, 2 ticks each: a period
+  1/8 of the way towards the note *depth* semitones down, halfway back,
+  the note, the same upwards, the note again (6 Hz).
+- **Repeats**: `fa`+*n* remembers where it is and sets slot 0's counter to
+  *n*; `fa 00` jumps back while the counter, counted down each time, was
+  not 0. The part plays *n* + 1 times. The five slots `fa` to `fe` can
+  nest.
+- The melody ends after its last event; the player then stops the sound.
+
+**Version 2's envelope** shapes each note's loudness by the pulse width
+([hardware.md](hardware.md#9-sound)). For every note the player builds a
+table of high times, one per pulse of the tone, and the timer takes the
+next value at the end of each pulse, keeping the last one:
+
+- With an envelope *N* (`N.amp`, [below](#sound-envelopes-amp-a)) of
+  points *p* spaced *t* µs apart, the table has ((count - 1) × *t* +
+  *X* - 1) / *X* + 1 entries for the pulse time *X*: entry *k* is the
+  envelope's level at *k* × *X* µs (a straight line between points),
+  times (0x900 × *X* / 1000) × volume / 256, divided by 65536, and at
+  least 10. 0x900 × *X* / 1000 is *X* µs in timer ticks, so a level of
+  1.0 at volume 256 makes each pulse *X* µs high. If the envelope's *t* is
+  0 the pulse time is used, and the other way round.
+- With envelope 0 the table is one entry: (0x1200 × *X* / 1000) × volume /
+  256, twice that width, for the whole note.
+- Versions 0 and 1 have no table: a square wave.
+
+The envelope's time runs at one point per pulse, so it is *X* µs a step
+only for a note whose period is *X*; Cybiko's files use pulse times of 0.3
+to 9 ms. (**Verified**: the duty cycle the emulator logged matches this
+table pulse by pulse.)
+
+A worked example, Mountaineer's `left.music`:
+
+```text
+02 01 00 04        version 2, 4 event bytes
+06 a7 0a 00 22     pulse 1703 us, volume 10, envelope 34 (34.amp)
+8d 0a              C#5 (0x8d - 0x44 = 73) for 10 ticks
+f9 8e              gliding to D5
+```
+
+**Converter** (MIDI to `.music`) keeps the chosen tracks, transposes, and
+makes one line of notes from them: "high-tone envelope" plays the highest
+of the notes sounding at a time, "last pressed note" the newest. Notes
+outside 0-127 after transposing are left out and counted. It writes
+version 1 with no repeats, glides or vibrato.
+
+## Sound envelopes (`.amp`, `.a`)
+
+The loudness shapes of version 2 melodies. CyOS keeps 60 of them, `1.amp`
+to `60.amp`, in `mplayer.app`'s archive in the flash: fades in and out,
+tremolos, steps. A melody picks one by number. (**Verified**: read from
+Converter's code and `mplayer.app`'s, and all 60 read this way.)
+
+```text
+u8      version (0)
+u16 BE  Tdiscret: microseconds between points
+u16 BE  number of points
+then the points: u16 BE each, 0 (silent) to 65535 (loudest)
+```
+
+With more than one point Tdiscret must not be 0. CyOS's envelopes have 1
+to 34 points 7 to 65 ms apart.
+
+Converter writes them from a **text source**, `.a`. Its own template:
+
+```text
+;
+; This is source text of *.a file for convert it to
+; binary amplitude of sound destination *.amp file.
+;
+Version   0  ; format version for dst *.amp file
+Tdiscret  1.000  ; float data discret. time in milliseconds
+;
+; <first number> 1 : +point number for start point of data
+;              >=1 : add to previous = current point number
+;         [absent] : 1
+; <second number on string> : float t/T = 1/Q
+;
+      0.0 ; start point
+1     1.0
+3     0.0
+end
+```
+
+Each line after the header is an optional step (1 when left out) and a
+level from 0.0 to 1.0, stored as level × 65535 rounded. A step *s* of 2 or
+more adds *s* points on a straight line from the previous level:
+previous + (level - previous) × *k* / *s* for *k* = 1 to *s*, the
+division rounded towards 0. The template above gives 0, 1.0, 0.67, 0.33,
+0: `00 03e8 0005 0000 ffff aaaa 5555 0000`. CyOS's envelopes come out of
+such files exactly: `59.amp`'s 34 points are the three lines `0.0`,
+`3 1.0`, `30 0.100008`. The level is "t/T", the share of the pulse that is
+high ([above](#melodies-mus-music)).
+
+## Recordings (`.wav`)
+
+CyRecord (the voice recorder) and CyTalk (its Rec button) record from the
+Xtreme's built-in microphone into ordinary WAV files: IMA ADPCM, 8000 Hz,
+mono, 4 bits a sample, in blocks of 256 bytes (505 samples), with a `fact`
+chunk (**from the code**: `sound.dl` 21.1.1 holds this header and writes
+it). CyRecord shows them as "32 kbps". `sound.dl` also knows 8 and 16-bit
+PCM WAV files. Any WAV tool reads them; the header is:
+
+```text
+RIFF size WAVE
+fmt  20: 0011 (IMA ADPCM), 1 channel, 8000 Hz, 4055 bytes/s, block 256,
+         4 bits, extra 2 bytes: 505 samples a block
+fact 4: the number of samples
+data ...
+```
+
+CyTalk names its recordings `YYYY-MM-DD--HH-MM-SS.wav` in the folder
+`WTRecord` on the disk. Whether CyRecord plays other sample rates was not
+tried.
 
 ## MXD clips
 
@@ -330,9 +507,17 @@ Clips of 30-40 s are what Cybiko shipped and what was tested. Longer ones
 should work, since nothing in the format limits the length, but they have
 not been tried.
 
+## Tools
+
+[`tools/`](tools/) has a Python converter for each of these formats (pack
+and archive tools, pictures, melodies, envelopes, recordings, MXD clips);
+[tools/README.md](tools/README.md) says how to use them.
+
 ## Open questions
 
-- Converter's `.music` (from MIDI) and `.amp`/`.a` sound formats.
+- What unit of time Converter's MIDI reader works in (it divides it by
+  10400 to get ticks); the player's tick is 10 ms.
+- How sound.dl reaches the speaker and the microphone.
 
 - The pack header (bytes 3-0x16), the per-entry time and trailing u32, and
   the 32-bit value in each file's 12-byte header.

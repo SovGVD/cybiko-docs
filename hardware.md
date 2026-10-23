@@ -255,16 +255,31 @@ The chip only knows the year modulo 4, so CyOS keeps the rest itself.
 
 ## 9. Sound
 
-The speaker is a piezo on P15, which is also TPU channel 1's output TIOCB1.
+The speaker is on P15, which is also TPU channel 1's output TIOCB1.
 CyOS makes tones two ways (**Verified**):
 
-- **TPU**: channel 1 in PWM mode 2 (TGRA period, TGRB duty) or toggling
-  TIOCB1 on each compare match. The frequency is the timer clock divided by
-  the period (halved when toggling).
+- **TPU**: channel 1 in PWM mode 2 (TGRA period, TGRB high time) or
+  toggling TIOCB1 on each compare match. The frequency is the timer clock
+  divided by the period (halved when toggling).
 - **Software**: flipping P15 in a loop.
 
-There is one square-wave voice and no volume control (**Guess** for the
-volume). The MP3 cartridge has its own decoder and headphone output.
+The tone is a pulse wave, and its **high time sets the loudness**: CyOS's
+melody player runs the TPU at 18.432 MHz / 8 = 2.304 MHz with the note's
+period in TGRA, and for a melody with a sound envelope it changes TGRB on
+every pulse, from a table of high times (**Verified** in an emulator: the
+duty cycle follows the envelope pulse by pulse). Kernel export 1354 starts
+such a tone (the period, then a pointer to the table of high times and its
+length; no table means a square wave) and export 1355 stops it (**from the
+code** of `mplayer.app`). The melody and envelope files are in
+[file-formats.md](file-formats.md#melodies-mus-music).
+
+The Xtreme also plays and records speech: CyRecord and CyTalk use
+`sound.dl`, which reads and writes 8 kHz IMA ADPCM WAV files
+([file-formats.md](file-formats.md#recordings-wav)) and knows a `speaker`
+and `mic8`/`mic16` devices and a "soundblaster" sound device. How the
+built-in microphone is read and how sampled sound reaches the speaker are
+not worked out (**Guess**: the A/D converter and the same PWM output). The
+MP3 cartridge has its own decoder and headphone output.
 
 ## 10. Serial ports and the debug console
 
@@ -297,6 +312,7 @@ From the H8S to the AVR:
 |---|---|
 | `01 02 ch` | tune to RF channel *ch*, 2-9 (2 is the base channel, 4 is Chat's) |
 | `01 03 xx xx` | unknown setting (CyOS sends `00 00`) |
+| `01 07 00 00` | sent when CyTalk starts talking; see below |
 | `30 f` + 51 bytes | send a short packet: 50 bytes plus a spare byte the DTC count includes; *f* is 0 or 1, meaning unknown |
 | `cf f` + 201 bytes | send a long packet: 200 bytes plus the spare byte |
 
@@ -325,6 +341,18 @@ CyOS builds on them (pings, acknowledgements, messages, chat, gates), are in
 it does on the air (modulation, preamble, framing) is not known. Its
 program came with CyOS updates as `avr*.boot` files
 ([file-formats.md](file-formats.md#cyos-update-images-boot)).
+
+**CyTalk, the walkie-talkie,** takes the radio away from packets. About
+3.5 s after Talk is pressed, CyOS sends `01 02 02` and `01 07 00 00` to
+the AVR, then switches SCI2 off (SCR2 = 0 and its module stop bit set) and
+changes port 2 bits 4 and 5 (P2DR 50, then 70, then 60). No packets are
+sent while it talks. (**Verified** in an emulator, where no other Cybiko
+answers; the voice itself was not seen.) So the voice doesn't travel as
+CyOS packets: **Guess**: `01 07` puts the AVR and the RF chip into a voice
+mode and port 2 bits 4-5 route the audio, so a gate or an ESP32 can't
+carry CyTalk without knowing the AVR's air protocol. CyTalk's own strings
+name the switch "CommonRF -> Walkie-Talkie"; it offers three channels and
+"Invite Partner", which goes through normal CyOS messages.
 
 ## 12. Flash and the unit ID
 
@@ -392,7 +420,8 @@ All **MAME / datasheet**, used by CyOS as noted.
 ## 15. Open questions
 
 - The real wiring of Help, "." and P (row 9 works, MAME says A13).
-- What the radio's flag byte *f* and the `01 03` command mean.
+- What the radio's flag byte *f* and the `01 03` and `01 07` commands mean.
+- How CyTalk's voice goes over the air, and how the microphone is read.
 - The AVR's air protocol.
 - Which A/D channel reads the battery, and its scale.
 - The exact HD66421 shade formula.
