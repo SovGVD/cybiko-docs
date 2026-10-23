@@ -297,7 +297,11 @@ the object itself is the first argument.
 | output, source | 88 | `(source)`: connects them; `(0)` disconnects |
 | source | 80 | `(format)`: sets the source's format (after a converter) |
 | output | c, 10, 14 | start, stop, playing |
+| output | 5c | the position, in ms |
+| output | 64 | `(ms)`: sets the position; takes effect at the next start |
+| output | 40 | its controls (see below) |
 | output | 1c, 90 | close, disconnect |
+| source | 68 | its length, in ms |
 
 The clip player opens `:music.mp3` (or `:music.wav`), takes the output for
 the source's format (`MP3AudioOutput` for MP3, `speaker` for IMA ADPCM),
@@ -305,6 +309,21 @@ gives up if the output isn't ready, connects them (through a converter when
 the two formats' names differ), waits 200 ms and starts it. At the end it
 stops it, waits while it is playing, closes and disconnects it and releases
 the source, the output and the converter.
+
+**Seeking and pausing**, as the MP3 Player does them (its engine is the
+`MP3Ctrl` interface of `MP3Player.dl`, which uses these same objects): to
+seek, stop the output, set its position and start it again; to pause, keep
+the position (`5c`) and stop; to resume, set the position and start. The
+player's Left and Right keys seek by whole seconds this way.
+
+**Volume, balance and tone** are controls of the output: `out->40()`
+gives the list, and the list's method `10` takes a name and returns the
+control: `"gain"` (the volume), `"balance"`, `"bass"`, `"treble"`,
+`"loudness"`, `"superbass"`. A control has `8`: `(&min, &max)`, its range
+(returns true if it has one), `c`: `(value)` sets it, and `10` reads it.
+The MP3 Player's equalizer modes are sets of bass, treble and loudness.
+(All of this is from the code of `Mp3Player.app` and `MP3Player.dl`; not
+yet tried from a program of ours.)
 
 ### 2.2 Installing
 
