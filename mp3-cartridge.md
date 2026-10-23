@@ -276,6 +276,38 @@ their imports, and what they were seen doing. Most of them are a guess:
 | `Mp3Player.app` | the MP3 Player application |
 | `root.ico`, `install.js` | the pack's icon, and the EZ Loader install script |
 
+### 2.1 sound.dl, as the clip player uses it
+
+Worked out from the CD's clip player and checked by writing a free one
+([player/](player/README.md)), in an emulator. `sound.dl`'s export 0
+returns the sound system, a C++ object. Every object here has its method
+table at its first word; the numbers below are byte offsets into it, and
+the object itself is the first argument.
+
+| Object | Offset | Method |
+| --- | --- | --- |
+| system | 3c | `(":music.mp3")`: opens a part of the application's archive (or a file) as a source; 0 if not there |
+| system | 18 | `(device)`: an output, `"MP3AudioOutput"` for the cartridge's decoder or `"speaker"` |
+| system | 44 | `(object)`: releases a source, output or converter |
+| source, output | 48 | its format |
+| format | c | the format's name: `"MP3"`, `"IMAADPCM"` |
+| format | 8 | `(other format)`: a converter between them |
+| converter | 48, 4c | its output and input formats |
+| output | 18 | ready: false when the decoder is in use ("The music codec is busy. Please try later") |
+| output, source | 88 | `(source)`: connects them; `(0)` disconnects |
+| source | 80 | `(format)`: sets the source's format (after a converter) |
+| output | c, 10, 14 | start, stop, playing |
+| output | 1c, 90 | close, disconnect |
+
+The clip player opens `:music.mp3` (or `:music.wav`), takes the output for
+the source's format (`MP3AudioOutput` for MP3, `speaker` for IMA ADPCM),
+gives up if the output isn't ready, connects them (through a converter when
+the two formats' names differ), waits 200 ms and starts it. At the end it
+stops it, waits while it is playing, closes and disconnects it and releases
+the source, the output and the converter.
+
+### 2.2 Installing
+
 `install.js` puts `*.app`, `InterfaceMan.dl`, `mp3init.dl`, `CyPlayer.dl` and
 `format_rd.dl` in the root of the Cybiko's disk, and the other `.dl` files in
 `Libraries/`. CyOS 1.5.08 also finds them when they are all in the root.

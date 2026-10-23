@@ -2,7 +2,7 @@
 """Turn a video into an MXD clip for the Cybiko Xtreme MP3 cartridge, or an
 MXD clip back into a video.
 
-    cybiko_mxd.py VIDEO OUT.app --template CLIP.app [options]
+    cybiko_mxd.py VIDEO OUT.app [--template CLIP.app] [options]
     cybiko_mxd.py CLIP.app OUT.mp4 [--zoom N]
 
 The second form plays the clip's frames at its own frame rate over its
@@ -13,12 +13,14 @@ about five frames a second, played over an MP3 sound track. Put OUT.app on
 the MP3 cartridge's card and it shows up on the desktop
 next to the MP3 Player.
 
-The clip's player program (main.e) is Cybiko's and is not in this
-repository, so the converter copies it from one of the clips on the MP3
-cartridge CD (flavor.app, free.app and the others all carry the same one):
-pass any of them as --template.
+The clip's player program (main.e) is the free one from player/ in
+cybiko-docs (cybiko_mxd_player.e, next to this script). To use Cybiko's own
+player instead, pass one of the clips on the MP3 cartridge CD (flavor.app,
+free.app and the others all carry the same one) as --template. Either way
+the clip needs the cartridge's software (sound.dl) on the Cybiko.
 
 Options:
+    --template CLIP   take the player (main.e) from this clip
     --name TEXT       the name under the desktop icon (default: OUT's name)
     --fps N           frames a second, 1-5 (default 5, as on the CD; the
                       Cybiko cannot draw much faster and drops frames)
@@ -157,6 +159,14 @@ def root_inf(name):
     return ("\r\n".join(lines) + "\r\n").encode("latin-1", errors="replace")
 
 
+def free_player():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cybiko_mxd_player.e")
+    try:
+        return open(path, "rb").read()
+    except OSError:
+        sys.exit("%s is missing: take it from cybiko-docs' tools/ or pass --template" % path)
+
+
 def template_player(path):
     for name, method, data in cybiko_cap.cy_entries(open(path, "rb").read()):
         if name == "main.e" and data is not None:
@@ -221,7 +231,7 @@ def main():
     p = argparse.ArgumentParser(description="Video to Cybiko MXD clip", usage=__doc__)
     p.add_argument("video")
     p.add_argument("out")
-    p.add_argument("--template", required=True)
+    p.add_argument("--template")
     p.add_argument("--name")
     p.add_argument("--fps", type=float, default=5.0)
     p.add_argument("--start", type=float)
@@ -235,7 +245,7 @@ def main():
         sys.exit("--fps must be 1 to 5")
     name = a.name or os.path.splitext(os.path.basename(a.out))[0]
 
-    player = template_player(a.template)
+    player = template_player(a.template) if a.template else free_player()
     frames = get_frames(a)
     music = get_music(a)
     print("%d frames, %d KB of music" % (len(frames), len(music) // 1024))

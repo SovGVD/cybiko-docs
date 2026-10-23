@@ -189,13 +189,17 @@ end
   <div id="clip-out" class="out"></div>
 
   <h3>Make a clip</h3>
-  <p>The clip's player program (<code>main.e</code>) is Cybiko's, so making a clip needs one of the clips from the
-    MP3 cartridge CD (<code>flavor.app</code>, <code>free.app</code>...) as a template. The picture comes from the
-    browser's video decoder, so it can differ slightly from the Python tool's (which uses ffmpeg); the rest is the
-    same.</p>
+  <p>The clip's player program (<code>main.e</code>) is the free one made for these tools; or take Cybiko's own from
+    one of the clips on the MP3 cartridge CD (<code>flavor.app</code>, <code>free.app</code>...). Both need the
+    cartridge's software on the Cybiko. The picture comes from the browser's video decoder, so it can differ
+    slightly from the Python tool's (which uses ffmpeg); the rest is the same.</p>
   <div class="row">
     <div class="drop small" data-for="mk-video"><input type="file" id="mk-video" accept="video/*,audio/*"><span>Video</span></div>
-    <div class="drop small" data-for="mk-template"><input type="file" id="mk-template" accept=".app"><span>Template clip</span></div>
+    <label>Player <select id="mk-player">
+      <option value="free">the free player</option>
+      <option value="template">Cybiko's, from a CD clip</option>
+    </select></label>
+    <div class="drop small" data-for="mk-template" id="mk-template-box" hidden><input type="file" id="mk-template" accept=".app"><span>Clip from the CD</span></div>
   </div>
   <div class="opts">
     <label>Name <input id="mk-name" placeholder="the file's name" size="14"></label>
@@ -232,6 +236,7 @@ end
 <script src="lib/music.js"></script>
 <script src="lib/amp.js"></script>
 <script src="lib/wav.js"></script>
+<script src="lib/mxdplayer.js"></script>
 <script src="lib/mxd.js"></script>
 <script src="app.js"></script>
 </body>

@@ -214,25 +214,29 @@ python3 cybiko_wav.py to-pcm 2001-05-01--12-00-00.wav recording.wav
 ## cybiko_mxd.py: MXD video clips
 
 ```text
-cybiko_mxd.py VIDEO OUT.app --template CLIP.app [options]
+cybiko_mxd.py VIDEO OUT.app [--template CLIP.app] [options]
 cybiko_mxd.py CLIP.app OUT.mp4 [--zoom N]
 ```
 
 Makes a clip for the MP3 cartridge from any video ffmpeg reads, or plays a
-clip back into a video. The clip player program is Cybiko's, so making a
-clip needs one of the CD's clips (`flavor.app`, `free.app`, ...) as
-`--template`. Options: `--name` (the desktop name), `--fps 1-5`,
+clip back into a video. The clip's player program is the free one from
+[player/](../player/README.md) (`cybiko_mxd_player.e`, which must stay next
+to the script); `--template` takes Cybiko's own from one of the CD's clips
+(`flavor.app`, `free.app`, ...) instead. Either needs the MP3 cartridge's
+software on the Cybiko. Options: `--name` (the desktop name), `--fps 1-5`,
 `--start S`, `--duration S`, `--fit crop|pad`, `--dither fs|bayer|none`,
 `--audio small|hifi`, `--gamma G`. Needs ffmpeg with libmp3lame.
 
 ```sh
-python3 cybiko_mxd.py trailer.mp4 trailer.app --template flavor.app --duration 30
+python3 cybiko_mxd.py trailer.mp4 trailer.app --duration 30
+python3 cybiko_mxd.py trailer.mp4 trailer.app --template flavor.app
 python3 cybiko_mxd.py flavor.app flavor.mp4
 ```
 
 ## Not here
 
 - **CyOS modules (`main.e`)**: building one needs a compiler for the H8S;
-  [cybiko-browser](https://github.com/SovGVD/cybiko-browser)'s
-  `tools/cybiko_mkapp.py` turns GNU H8 tools' output into one.
+  [`player/mkmodule.py`](../player/mkmodule.py) (used to build the clip
+  player) and [cybiko-browser](https://github.com/SovGVD/cybiko-browser)'s
+  `tools/cybiko_mkapp.py` turn GNU H8 tools' output into one.
 - **`.boot` update images**: their packing is not known yet.

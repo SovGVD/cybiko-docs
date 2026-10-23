@@ -464,7 +464,7 @@ emulator.)
 | --- | --- | --- |
 | `music.mp3` | 0 | the sound track: a plain MP3 file |
 | `clip.pic` | 2 | the frames |
-| `main.e` | 2 | the player program: 4311 bytes, the same in every clip |
+| `main.e` | 2 | the player program: on the CD 4311 bytes, the same in every clip |
 | `root.inf` | 2 | the application's description (above) |
 | `0.ico` | 0 or 2 | the desktop icon (above) |
 
@@ -499,9 +499,22 @@ together and run side by side. (**Verified** in an emulator whose CPU runs
 at the real speed.)
 
 **`main.e`** is the clip player. It reads `clip.pic` and `music.mp3` from
-its own archive and uses `sound.dl` (21.1.1, from the cartridge's software)
-to start the cartridge. It is Cybiko's code, so a new clip needs a copy of
-it from a CD clip.
+its own archive and plays the music through `sound.dl` (21.1.1, from the
+cartridge's software); how is in
+[mp3-cartridge.md](mp3-cartridge.md#21-sounddl-as-the-clip-player-uses-it).
+It starts the sound, then shows each frame when its time comes (frame *n*
+at start + *n* × period), and stops the sound after the last frame. The
+CD's player is Cybiko's code. [player/](player/README.md) is a free one
+that does the same (and also stops at Esc), so new clips don't need a CD
+file; the [tools](tools/README.md#cybiko_mxdpy-mxd-video-clips) use it
+unless given a CD clip as a template. (**Verified** in an emulator: the
+same frames at the same times and the same sound as the CD's player.)
+
+**Smaller frames.** A frame can be smaller than the screen: its x, y,
+width and height place it, rows padded to whole bytes, over what the
+screen already shows. The free player draws them (**verified** in an
+emulator); whether Cybiko's player does is not known, and the CD's clips
+don't use them.
 
 Clips of 30-40 s are what Cybiko shipped and what was tested. Longer ones
 should work, since nothing in the format limits the length, but they have
@@ -522,7 +535,4 @@ and archive tools, pictures, melodies, envelopes, recordings, MXD clips);
 - The pack header (bytes 3-0x16), the per-entry time and trailing u32, and
   the 32-bit value in each file's 12-byte header.
 - The packing of `.boot` data.
-- What the clip player in `main.e` does beyond reading its parts (a free
-  clip player would mean clips need no CD file).
-- Whether clip frames can be smaller than full screen, using the per-frame
-  x, y, width and height fields.
+- Whether Cybiko's clip player draws frames smaller than the screen.

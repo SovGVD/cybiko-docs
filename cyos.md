@@ -161,8 +161,8 @@ Applications (`.app`) and libraries (`.dl`) on the disk are CyOS archives
 
 A native application is H8S code in a CyOS module (`main.e`) inside an
 application archive ([file-formats.md](file-formats.md)). These facts come
-from writing two of them (a Doom port and a web browser, built with the GNU
-H8 tools `gcc-h8300-hms`/`binutils-h8300-hms`) and running them in an
+from writing three of them (a Doom port, a web browser and the MXD clip
+player in [player/](player/README.md), built with the GNU H8 tools `gcc-h8300-hms`/`binutils-h8300-hms`) and running them in an
 emulator; none has run on a real Cybiko yet.
 
 - **Calling CyOS.** A module imports kernel exports by number; CyOS's own
@@ -180,6 +180,15 @@ emulator; none has run on a real Cybiko yet.
   offset 6c of its process object. Which vtable slot runs the thread
   differs between those two objects (the browser uses slot 7 with
   `cWinApp`; an earlier version used slot 4 with a plain `Process`).
+- **Waiting.** `Queue_get_message` with timeout 0 waits until a message
+  comes. To look without waiting, use `Queue_peek_message(queue, 1, min,
+  max)` (export 940; 1 takes the message off the queue).
+- **Ending.** When the thread function returns, the application ends. A
+  `cWinApp` application should set bit 2 of the 16-bit word at +4c of its
+  object first (Cybiko's clip player does it in its constructor); without
+  it the desktop is not drawn again and the screen keeps the
+  application's last picture. (Verified in an emulator with the clip
+  player.)
 - **Data.** The loader zeroes only a small bss area: keep zeroed data
   inside the image (the archive's compression removes the zeros).
 - **Alignment.** COFF objects cap data alignment at 4, so tables that need
@@ -207,6 +216,17 @@ emulator; none has run on a real Cybiko yet.
   1065, write 1282, dtor 85. `Input_*` are not in the SDK headers (its
   bytecode runtime provides them); these are the numbers CyOS's own
   applications import.
+- **The application's own parts.** `Archive_open_Ex(archive, name)`
+  (export 917) opens a part of the application's archive as a stream; the
+  archive is the pointer at +50 of the process object. The stream is not a
+  `FileInput`: `Input_read` 988 crashes on it. Call its methods instead, in
+  the table that the pointer at +4 of the stream points to: slot 2
+  (`+8`) reads a block, `(stream, buffer, length)`, giving the count; slot
+  3 (`+c`) reads a byte, -1 at the end. To delete it, take the object the
+  stream's first word points to and call slot 3 of the table at +8 of that
+  object with `(object, 3)`. Parts stored compressed (method 2) are
+  unpacked as they are read. (Verified with the clip player; this is what
+  Cybiko's clip player does.)
 
 ## Kernel exports
 
@@ -228,6 +248,7 @@ noted):
 | 270 | `Message_new(size)` (size = 48) |
 | 373 | `Message_attach_buffer(m, b)`: the buffer goes with the message and is freed with it |
 | 413 | `Message_check_delivery(m)`: `DL_NONE` 0, `DL_INQUEUE` 1, `DL_WAIT` 2, `DL_ABORT` 3, `DL_TIMEOUT` 4, `DL_SUCCESS` 5 |
+| 450 | the time, in the unit MXD clips' frame period counts in (0.1 ms) |
 | 468, 469 | the "cool" font, bold and normal (12 dots high, the desktop's) |
 | 484 | `cyid2str`: an ID as 7 letters ([radio-protocol.md](radio-protocol.md#5-cybiko-ids)) |
 | 501 | `Message_deliver(m, target, cyid, timeout)` |
@@ -247,6 +268,9 @@ noted):
 | 876 | `malloc` |
 | 891, 892 | the "mini" font, bold and normal (9 dots high) |
 | 914 | `FileInput_open` |
+| 917 | `Archive_open_Ex(archive, part name)`: a part of an archive as a stream (see above) |
+| 939 | `SystemThread_pause(thread, ms)` |
+| 940 | `Queue_peek_message(queue, remove, min, max)`: like 687 without waiting |
 | 943 | `Message_post(m, target, cyid)`: without delivery tracking |
 | 988 | `Input_read` (not in the headers) |
 | 1034 | `Process_request_focus` |

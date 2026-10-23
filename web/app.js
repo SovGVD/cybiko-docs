@@ -550,9 +550,11 @@
   onFile("clip-file", playClip);
 
   // Make a clip.
-  const ready = () => { $("mk-go").disabled = !$("mk-video").files[0] || !$("mk-template").files[0] ||
+  const useTemplate = () => $("mk-player").value === "template";
+  const ready = () => { $("mk-go").disabled = !$("mk-video").files[0] || (useTemplate() && !$("mk-template").files[0]) ||
     ($("mk-audio").value === "file" && !$("mk-mp3").files[0]); };
   for (const id of ["mk-video", "mk-template", "mk-mp3"]) $(id).addEventListener("change", ready);
+  $("mk-player").addEventListener("change", () => { $("mk-template-box").hidden = !useTemplate(); ready(); });
   $("mk-audio").addEventListener("change", () => { $("mk-mp3-box").hidden = $("mk-audio").value !== "file"; ready(); });
 
   const once = (t, ev) => new Promise((res, rej) => {
@@ -635,7 +637,7 @@
 
   $("mk-go").addEventListener("click", async () => {
     const out = $("mk-out"), video = $("mk-video").files[0], go = $("mk-go");
-    const bar = el("progress", { max: 1, value: 0 }), status = el("p", { class: "note" }, "Reading the template...");
+    const bar = el("progress", { max: 1, value: 0 }), status = el("p", { class: "note" }, "Reading the player...");
     put(out, status, bar);
     go.disabled = true;
     try {
@@ -644,7 +646,7 @@
         dither: $("mk-dither").value, gamma: num("mk-gamma", 1.0), audio: $("mk-audio").value };
       if (!(o.fps >= 1 && o.fps <= 5)) throw new Error("frames a second must be 1 to 5");
       const name = $("mk-name").value || base(video.name);
-      const player = C.mxd.templatePlayer(await readFile($("mk-template").files[0]));
+      const player = useTemplate() ? C.mxd.templatePlayer(await readFile($("mk-template").files[0])) : C.mxd.freePlayer();
       status.textContent = "Taking the frames from the video...";
       const frames = await videoFrames(video, o, (k, n) => { bar.max = n; bar.value = k; status.textContent = "Frame " + k + " of " + n; });
       status.textContent = "Making the sound...";

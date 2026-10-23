@@ -71,6 +71,14 @@
     return U.toLatin1(lines.join("\r\n") + "\r\n", true);
   };
 
+  // The free clip player (player/ in this repository), from lib/mxdplayer.js.
+  X.freePlayer = function () {
+    if (!C.mxdPlayer) throw new Error("lib/mxdplayer.js is not loaded");
+    const s = atob(C.mxdPlayer), b = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return b;
+  };
+
   X.templatePlayer = function (blob) {
     for (const p of C.cap.cyEntries(blob)) if (p.name === "main.e" && p.data) return p.data;
     throw new Error("the template has no main.e: pass one of the MXD clips from the MP3 cartridge CD");
