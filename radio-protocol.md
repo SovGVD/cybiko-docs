@@ -488,12 +488,12 @@ uses it for two things:
 
 Both, with the packed message's format, are in [cywig.md](cywig.md).
 
-A gate is no different: only the Cybikos that hear it directly can use it.
-Tested with the same three Cybikos and a gate in range of C only: C's
-browser loaded a page through the gate, B showed no gate on its desktop, and
-A found no gate. No Cybiko passes its gate on: a Cybiko that hears a gate
-doesn't set the gate flag on its own packets, and A never sent anything to
-the gate's ID.
+A gate is no different: every Cybiko that hears the gate directly can use
+it, and no Cybiko passes it on further. Tested with the same three Cybikos
+in a row (A-B-C) and a gate heard by B and C but not A: B and C both
+loaded pages through it, and A found no gate. With the gate heard by C
+only, B showed no gate either. A Cybiko that hears a gate doesn't set the
+gate flag on its own packets, and A never sent anything to the gate's ID.
 
 ### What this means for a mesh
 
