@@ -20,7 +20,13 @@ What it does, like Cybiko's:
 
 And beyond it:
 
-- **Esc** stops the clip.
+- **Keys:** Space (or Enter) pauses and resumes, Left and Right go back
+  and forward 5 seconds, Up and Down change the volume, Esc stops the clip.
+  After a key a bar at the bottom shows the time, the clip's length and the
+  volume for 2 seconds (all the time while paused). Seeking takes a moment:
+  the frames up to the new place have to be unpacked (about 40 ms each, so
+  about 1 s for 5 s forward), and going back reads the clip from the start.
+  The sound waits for the picture, so the two stay together.
 - Frames **smaller than the screen** are drawn at their x and y.
 - A clip **without sound** (no `music.mp3` or `music.wav`) plays silently.
   It checks first, because `sound.dl` crashes when asked for a part that
@@ -30,8 +36,10 @@ And beyond it:
 cartridge emulated): with the CD clip `hungry.app`'s frames and music, the
 same frames appear at the same times (within 2 ms) as with Cybiko's player,
 the sound plays for the same time at the same level, Esc stops picture and
-sound, and the desktop comes back at the end. Clips made by `cybiko_mxd.py` at 3 fps play at 3 fps. It
-has not run on a real Cybiko yet.
+sound, and the desktop comes back at the end. Clips made by `cybiko_mxd.py`
+at 3 fps play at 3 fps. Pausing, seeking and the volume were checked there
+too (the sound's position and the decoder's volume register). It has not
+run on a real Cybiko yet.
 
 ## Building
 

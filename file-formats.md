@@ -505,7 +505,8 @@ cartridge's software); how is in
 It starts the sound, then shows each frame when its time comes (frame *n*
 at start + *n* × period), and stops the sound after the last frame. The
 CD's player is Cybiko's code. [player/](player/README.md) is a free one
-that does the same (and also stops at Esc), so new clips don't need a CD
+that does the same (and also pauses, seeks, changes the volume and stops
+at Esc), so new clips don't need a CD
 file; the [tools](tools/README.md#cybiko_mxdpy-mxd-video-clips) use it
 unless given a CD clip as a template. (**Verified** in an emulator: the
 same frames at the same times and the same sound as the CD's player.)

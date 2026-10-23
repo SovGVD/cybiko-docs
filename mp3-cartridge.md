@@ -311,7 +311,8 @@ stops it, waits while it is playing, closes and disconnects it and releases
 the source, the output and the converter.
 
 **Seeking and pausing**, as the MP3 Player does them (its engine is the
-`MP3Ctrl` interface of `MP3Player.dl`, which uses these same objects): to
+`MP3Ctrl` interface of `MP3Player.dl`, see 2.2, which uses these same
+objects): to
 seek, stop the output, set its position and start it again; to pause, keep
 the position (`5c`) and stop; to resume, set the position and start. The
 player's Left and Right keys seek by whole seconds this way.
@@ -321,11 +322,77 @@ gives the list, and the list's method `10` takes a name and returns the
 control: `"gain"` (the volume), `"balance"`, `"bass"`, `"treble"`,
 `"loudness"`, `"superbass"`. A control has `8`: `(&min, &max)`, its range
 (returns true if it has one), `c`: `(value)` sets it, and `10` reads it.
-The MP3 Player's equalizer modes are sets of bass, treble and loudness.
-(All of this is from the code of `Mp3Player.app` and `MP3Player.dl`; not
-yet tried from a program of ours.)
+(Found in the code of `Mp3Player.app` and `MP3Player.dl`; **verified**
+with the free clip player in an emulator: seeking and pausing work this
+way, and a step of `"gain"` changes the decoder's volume register, codec
+register 0x10, by 7 between 0x00 and 0x7f.)
 
-### 2.2 Installing
+The output's position (`5c`) runs a little ahead of what is heard, about
+0.4 s: it seems to count what has been sent to the decoder.
+
+### 2.2 The MP3 Player application
+
+`Mp3Player.app` ("MP3 Player", version 24.4.2) is the cartridge's music
+player: a list of the card's `.mp3` and `.mp2` files with a playlist, and a
+player screen with volume, balance, a time bar and a toolbar (equalizer,
+loop, random, previous, play/pause, stop, next). Its help gives the keys:
+Shift+Left/Right rewind and fast forward, Fn+Up/Down previous and next song,
+Up/Down volume, Fn+Left/Right balance, Select the equalizer mode, Tab moves
+between the fields, Menu or Fn+Enter opens the playlist. Found in its code
+and `MP3Player.dl`'s (none of it is in the SDK):
+
+- **It doesn't play anything itself.** It imports only the kernel,
+  `CyWin.dl`, `cdialogs.dl` and `InterfaceMan.dl`. The playing is done by
+  `MP3Player.dl`, which it reaches through `InterfaceMan.dl`, a registry of
+  interfaces by name: export 6 returns the registry, export 7 makes a name
+  object from a string and 14 frees one. The application registers
+  `MP3Player.dl` as the provider of `"MP3Ctrl"` (registry method `10`),
+  then asks for interfaces named `"MP3Ctrl"` (method `2c`, "find_interfaces
+  succeed" in its log) and takes the first (method `18`, "get_interface").
+- **`MP3Ctrl`**, in `MP3Player.dl`, is a playlist engine with its own
+  thread. Its methods (byte offsets in its table; what each does is read
+  from its code and how the application calls it, the time ones are
+  verified only through sound.dl as in 2.1):
+
+  | Offset | Method |
+  | --- | --- |
+  | 18 | `(n)`: play song n of the playlist |
+  | 1c | `(flag)`: stop |
+  | 20 | `(ms)`: go to that time in the song; below 0 is the previous song (1 s before its end), past the end the next one |
+  | 24, 28 | `(on)`: loop mode, random mode |
+  | 2c, 30, 34 | playlist editing (by file name) |
+  | 3c, 40, 44 | next song (following loop and random), first, last |
+  | 48 | `(&status)`: the state, loop and random, the time in ms and more |
+  | 4c | `(&helper)`: the volume, balance and equalizer object below |
+
+  The engine opens each song with sound.dl's `3c` (by file name),
+  connects it to the `MP3AudioOutput` output and plays it as in 2.1, takes
+  the length from the source (`68`) and the time from the output (`5c`).
+  A seek stops the output and wakes the engine's thread, which sets the
+  position (`64`) and starts it again.
+- **The helper** (`MP3CtrlHelper`) holds the output's `"balance"`,
+  `"gain"`, `"bass"`, `"treble"`, `"loudness"` and `"superbass"` controls.
+  Its methods: `8` set the volume (a byte), `c` set the balance, `10` set
+  the equalizer mode, `14`, `18`, `1c` get them, `20` and `24` the volume's
+  and balance's ranges. An equalizer mode sets bass, treble and loudness
+  from a table:
+
+  | Mode | Bass | Treble | Loudness |
+  | --- | --- | --- | --- |
+  | 0 | 0 | 0 | 0 |
+  | 1 | -2 | 1 | 2 |
+  | 2 | 2 | 3 | 2 |
+  | 3 | -2 | 0 | 4 |
+  | 4 | 3 | -2 | 5 |
+
+- **The screen** is updated by a second thread of the application,
+  `"cMP3"`, which reads the engine's status every 500 ms and posts
+  messages 0x2010, 0x2020 and 0x2030 to the application's queue (0x2020
+  when a song has ended, as far as can be seen).
+- While a song plays, other applications are refused ("You can't run
+  applications while an MP3 file is being played.").
+
+### 2.3 Installing
 
 `install.js` puts `*.app`, `InterfaceMan.dl`, `mp3init.dl`, `CyPlayer.dl` and
 `format_rd.dl` in the root of the Cybiko's disk, and the other `.dl` files in
