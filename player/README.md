@@ -1,12 +1,19 @@
-# A free MXD clip player
+# Free MXD clip players
 
 MXD clips (the MP3 cartridge's video clips, see
 [file-formats.md](../file-formats.md#mxd-clips)) carry their own player
-program, `main.e`. The CD's clips all have the same one, Cybiko's. This is
-a player written from scratch that does the same, so a new clip needs no
-file from the CD. The [converters](../tools/README.md#cybiko_mxdpy-mxd-video-clips)
-([and the web page](../web/README.md#mxd-clips)) put it in every clip they
-make, unless they are given a CD clip to take Cybiko's player from.
+program, `main.e`. The CD's clips all have the same one, Cybiko's. These are
+players written from scratch that do the same, so a new clip needs no file
+from the CD:
+
+- **simple** (`simple.c`, 7 KB): plays the clip; Esc stops it.
+- **controls** (`controls.c`, 14 KB): the same, with keys to pause, seek
+  and change the volume, and a time bar.
+
+The [converters](../tools/README.md#cybiko_mxdpy-mxd-video-clips)
+([and the web page](../web/README.md#mxd-clips)) put the simple one in the
+clips they make, the one with controls when asked (`--player controls`), or
+Cybiko's own when given a CD clip to take it from.
 
 What it does, like Cybiko's:
 
@@ -20,8 +27,9 @@ What it does, like Cybiko's:
 
 And beyond it:
 
-- **Keys:** Space (or Enter) pauses and resumes, Left and Right go back
-  and forward 5 seconds, Up and Down change the volume, Esc stops the clip.
+- **Esc** stops the clip.
+- **Keys** (controls only): Space (or Enter) pauses and resumes, Left and
+  Right go back and forward 5 seconds, Up and Down change the volume.
   After a key a bar at the bottom shows the time, the clip's length and the
   volume for 2 seconds (all the time while paused). Seeking takes a moment:
   the frames up to the new place have to be unpacked (about 40 ms each, so
@@ -37,7 +45,7 @@ cartridge emulated): with the CD clip `hungry.app`'s frames and music, the
 same frames appear at the same times (within 2 ms) as with Cybiko's player,
 the sound plays for the same time at the same level, Esc stops picture and
 sound, and the desktop comes back at the end. Clips made by `cybiko_mxd.py`
-at 3 fps play at 3 fps. Pausing, seeking and the volume were checked there
+at 3 fps play at 3 fps. The controls player's pausing, seeking and volume were checked there
 too (the sound's position and the decoder's volume register). It has not
 run on a real Cybiko yet.
 
@@ -48,14 +56,14 @@ player/build.sh
 ```
 
 Needs the GNU H8 tools (`binutils-h8300-hms`, `gcc-h8300-hms` on Debian and
-Ubuntu) and Python 3. It builds `build/player/main.e` and copies it to the
-two places the converters take it from: `tools/cybiko_mxd_player.e` and
-`web/lib/mxdplayer.js` (the same bytes, in base64). Commit those two after
-changing the player.
+Ubuntu) and Python 3. It builds both into `build/player/` and copies them to
+where the converters take them from: `tools/cybiko_mxd_player.e` (simple),
+`tools/cybiko_mxd_player_controls.e` and `web/lib/mxdplayer.js` (both, in
+base64). Commit those after changing a player.
 
 | File | What |
 | --- | --- |
-| `main.c` | the player |
+| `simple.c`, `controls.c` | the players |
 | `cyos.ld` | the CyOS functions it calls, by export number |
 | `link.ld`, `rt.s` | the module's layout and gcc's runtime helpers (from [cybiko-browser](https://github.com/SovGVD/cybiko-browser)) |
 | `mkmodule.py` | turns the linked program into a CyOS module ([format](../file-formats.md#cyos-modules-maine)) |

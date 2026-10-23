@@ -504,11 +504,11 @@ cartridge's software); how is in
 [mp3-cartridge.md](mp3-cartridge.md#21-sounddl-as-the-clip-player-uses-it).
 It starts the sound, then shows each frame when its time comes (frame *n*
 at start + *n* × period), and stops the sound after the last frame. The
-CD's player is Cybiko's code. [player/](player/README.md) is a free one
-that does the same (and also pauses, seeks, changes the volume and stops
-at Esc), so new clips don't need a CD
-file; the [tools](tools/README.md#cybiko_mxdpy-mxd-video-clips) use it
-unless given a CD clip as a template. (**Verified** in an emulator: the
+CD's player is Cybiko's code. [player/](player/README.md) has two free
+ones that do the same, a simple one (which also stops at Esc) and one that
+also pauses, seeks and changes the volume, so new clips don't need a CD
+file; the [tools](tools/README.md#cybiko_mxdpy-mxd-video-clips) use one of
+them unless given a CD clip as a template. (**Verified** in an emulator: the
 same frames at the same times and the same sound as the CD's player.)
 
 **Smaller frames.** A frame can be smaller than the screen: its x, y,

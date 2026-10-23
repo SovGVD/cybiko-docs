@@ -71,10 +71,12 @@
     return U.toLatin1(lines.join("\r\n") + "\r\n", true);
   };
 
-  // The free clip player (player/ in this repository), from lib/mxdplayer.js.
-  X.freePlayer = function () {
-    if (!C.mxdPlayer) throw new Error("lib/mxdplayer.js is not loaded");
-    const s = atob(C.mxdPlayer), b = new Uint8Array(s.length);
+  // A free clip player (player/ in this repository), from lib/mxdplayer.js:
+  // "simple" or "controls".
+  X.freePlayer = function (kind) {
+    const b64 = kind === "controls" ? C.mxdPlayerControls : C.mxdPlayer;
+    if (!b64) throw new Error("lib/mxdplayer.js is not loaded");
+    const s = atob(b64), b = new Uint8Array(s.length);
     for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
     return b;
   };

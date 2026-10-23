@@ -13,14 +13,18 @@ about five frames a second, played over an MP3 sound track. Put OUT.app on
 the MP3 cartridge's card and it shows up on the desktop
 next to the MP3 Player.
 
-The clip's player program (main.e) is the free one from player/ in
-cybiko-docs (cybiko_mxd_player.e, next to this script). To use Cybiko's own
-player instead, pass one of the clips on the MP3 cartridge CD (flavor.app,
-free.app and the others all carry the same one) as --template. Either way
-the clip needs the cartridge's software (sound.dl) on the Cybiko.
+The clip's player program (main.e) is one of the free ones from player/ in
+cybiko-docs, next to this script: the simple one (cybiko_mxd_player.e,
+default) or, with --player controls, the one with pause, seek and volume
+keys (cybiko_mxd_player_controls.e). To use Cybiko's own player instead,
+pass one of the clips on the MP3 cartridge CD (flavor.app, free.app and the
+others all carry the same one) as --template. Any of them needs the
+cartridge's software (sound.dl) on the Cybiko.
 
 Options:
-    --template CLIP   take the player (main.e) from this clip
+    --player KIND     "simple" (default) or "controls" (Space pauses,
+                      Left/Right seek, Up/Down volume)
+    --template CLIP   take Cybiko's player (main.e) from this CD clip
     --name TEXT       the name under the desktop icon (default: OUT's name)
     --fps N           frames a second, 1-5 (default 5, as on the CD; the
                       Cybiko cannot draw much faster and drops frames)
@@ -164,8 +168,9 @@ def root_inf(name):
     return ("\r\n".join(lines) + "\r\n").encode("latin-1", errors="replace")
 
 
-def free_player():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cybiko_mxd_player.e")
+def free_player(kind):
+    name = "cybiko_mxd_player.e" if kind == "simple" else "cybiko_mxd_player_controls.e"
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
     try:
         return open(path, "rb").read()
     except OSError:
@@ -237,6 +242,7 @@ def main():
     p.add_argument("video")
     p.add_argument("out")
     p.add_argument("--template")
+    p.add_argument("--player", choices=("simple", "controls"), default="simple")
     p.add_argument("--name")
     p.add_argument("--fps", type=float, default=5.0)
     p.add_argument("--start", type=float)
@@ -250,7 +256,7 @@ def main():
         sys.exit("--fps must be 1 to 5")
     name = a.name or os.path.splitext(os.path.basename(a.out))[0]
 
-    player = template_player(a.template) if a.template else free_player()
+    player = template_player(a.template) if a.template else free_player(a.player)
     frames = get_frames(a)
     music = get_music(a)
     print("%d frames, %s" % (len(frames), "%d KB of music" % (len(music) // 1024) if music else "no sound"))

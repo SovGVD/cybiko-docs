@@ -143,8 +143,10 @@ every frame as a PNG. (The Python tool's `CLIP.app OUT.mp4` turns a clip into
 a video with ffmpeg instead.)
 
 **Make a clip** (`cybiko_mxd.py VIDEO OUT.app`): choose the video. The
-clip's player program (`main.e`) is the free one from
-[player/](../player/README.md); *Player: Cybiko's, from a CD clip* takes
+clip's player program (`main.e`) is one of the free ones from
+[player/](../player/README.md): *the free player, simple* (the default) or
+*with controls* (`--player controls`: Space pauses, Left and Right seek,
+Up and Down change the volume). *Cybiko's, from a CD clip* takes
 Cybiko's own from one of the MP3 cartridge CD's clips (`flavor.app`,
 `free.app`...) instead, like the Python tool's `--template`. The options are
 the tool's: *Name* (`--name`, the desktop name; default the video's file name),
@@ -178,7 +180,7 @@ the clip is the same bytes. The browser must be able to play the video
 | `lib/bzip2.js` | bzip2 decompression, for EZ Loader packs |
 | `lib/cap.js` | packs, archives, CyOS's method 2 (both ways), flash dumps |
 | `lib/pic.js`, `lib/music.js`, `lib/amp.js`, `lib/wav.js`, `lib/mxd.js` | the other formats |
-| `lib/mxdplayer.js` | the free clip player, made by `player/build.sh` |
+| `lib/mxdplayer.js` | the free clip players, made by `player/build.sh` |
 | `test/compare.js` | checks the libraries against the Python tools |
 
 The libraries are plain scripts that put everything under one global,

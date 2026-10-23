@@ -646,7 +646,7 @@
         dither: $("mk-dither").value, gamma: num("mk-gamma", 1.0), audio: $("mk-audio").value };
       if (!(o.fps >= 1 && o.fps <= 5)) throw new Error("frames a second must be 1 to 5");
       const name = $("mk-name").value || base(video.name);
-      const player = useTemplate() ? C.mxd.templatePlayer(await readFile($("mk-template").files[0])) : C.mxd.freePlayer();
+      const player = useTemplate() ? C.mxd.templatePlayer(await readFile($("mk-template").files[0])) : C.mxd.freePlayer($("mk-player").value);
       status.textContent = "Taking the frames from the video...";
       const frames = await videoFrames(video, o, (k, n) => { bar.max = n; bar.value = k; status.textContent = "Frame " + k + " of " + n; });
       status.textContent = "Making the sound...";
