@@ -21,6 +21,7 @@ H8S. The EZ Loader pack is a PC format and is **little-endian**.
 - [Application parts: `root.inf`, icons, help](#application-parts-rootinf-icons-help)
 - [CyOS modules (`main.e`)](#cyos-modules-maine)
 - [CyOS update images (`.boot`)](#cyos-update-images-boot)
+- [Pictures (`.pic`, `.xpic`)](#pictures-pic-xpic)
 - [MXD clips](#mxd-clips)
 - [Open questions](#open-questions)
 
@@ -175,18 +176,9 @@ main desktop, `app` and `game` in those folders (**Verified** with native
 apps; the Xtreme's WAP browser 21.1.17 needs the first line set to `root`,
 and an empty category, to show on the main desktop).
 
-**`0.ico`** is an image with an 8-byte header, then 2-bit pixels, each row
-padded to whole bytes, the leftmost pixel in the top bits, 0 white to 3
-black:
-
-```text
-u8 2          bits per pixel
-u8 1          number of images (guess)
-u8 w, u8 h    width and height (25 x 18 on the CD's clips)
-u8 0, u8 0    (x, y? always 0)
-u8 w, u8 h    width and height again
-...           h rows of (w + 3) / 4 bytes
-```
+**`0.ico`** (the desktop icon), `root.ico`, `*.pic` parts and the like are
+pictures in the `.pic` format ([below](#pictures-pic-xpic)): an icon is
+one 2-bit image, 25 x 18 on the CD's clips.
 
 ## CyOS modules (`main.e`)
 
@@ -234,6 +226,55 @@ The data is packed (not LZSS and not readable as is). CyOS's flash loader
 unpacks it into an installer that programs the flash
 ([cyos.md](cyos.md#cyos-updates)). The packing itself is not worked out.
 
+## Pictures (`.pic`, `.xpic`)
+
+Cybiko pictures come in two kinds, one container:
+
+- **`.pic`**: four shades, 2 bits a pixel. Icons and the pictures inside
+  applications (`intro.pic`, `filetype.pic`) are in this format too.
+- **`.xpic`**: "photo" pictures, 4 bits a pixel, 13 shades. Photo Viewer
+  (Photo_Viewer.app 21.1.11, on the Xtreme CD) shows them.
+
+Both were made on a PC with **Cybiko Converter** (`Converter_Setup.exe` on
+the Xtreme CD): it turns a `.bmp` into a `.pic` ("Four" palette) or an
+`.xpic` ("Photo" palette) with brightness, contrast, noise and zoom
+sliders and a frame to pick the part of the picture, and turns `.pic` and
+`.xpic` back into `.bmp`. File names must be at most 40 characters and not
+start or end with `-`, `+` or `.`. (It also converts MIDI files into
+Cybiko `.music` melodies and a text description into `.amp` sounds; those
+formats are not worked out.)
+
+The format (**Verified**: read from Converter's load and save code, and
+pictures written this way open in Photo Viewer in an emulator):
+
+```text
+u8   bits per pixel: 2 (.pic) or 4 (.xpic); Converter refuses anything else
+u8   number of images
+u8   width  of the whole picture (the largest x + w of its images)
+u8   height of the whole picture (the largest y + h)
+then for each image:
+  u8 x, u8 y      where it goes (0, 0 for a single picture)
+  u8 w, u8 h      its size
+  h rows of (w * bpp + 7) / 8 bytes, top row first
+```
+
+- **`.pic` pixels**: four to a byte, the leftmost in the top two bits;
+  0 white, 1 light grey, 2 dark grey, 3 black. The same layout as the
+  screen's memory.
+- **`.xpic` pixels**: two to a byte, the leftmost in the top four bits;
+  0 white to **12 black**. Converter only writes 0-12 (it quantises with
+  12 thresholds and previews them as 255, 235, ..., 15). Photo Viewer gets
+  the shades by showing four 2-bit pictures in turn, about every 20 ms;
+  pixel value *v* averages out to *v*/4 of the way to black. Values 13-15
+  overflow there and come out light again, so they must not be used.
+- A `.pic` can hold several images: Photo Viewer flips through them with
+  Left/Right (from its manual), and `filetype.pic` in Photo Viewer holds
+  two 14 x 14 icons.
+- Photo Viewer lists `*.xpic` and `*.pic` files on the Cybiko's disk and on
+  the MP3 cartridge's card.
+
+A 160 x 100 `.xpic` is 8008 bytes; a `.pic` 4008.
+
 ## MXD clips
 
 An MXD clip is a short video in four greys with an MP3 sound track, made
@@ -255,7 +296,7 @@ use 128 kbps 44.1 kHz stereo, or 64 kbps 22.05 kHz mono (`free.app`). An ID3
 tag at the start is fine. It is read from the card and streamed to the
 decoder like any MP3 file.
 
-**`clip.pic`:**
+**`clip.pic`** is close to a `.pic`, but not one:
 
 ```text
 u16 BE  frame period, in units of 0.1 ms (2000 = 200 ms = 5 frames a second)
@@ -290,6 +331,8 @@ should work, since nothing in the format limits the length, but they have
 not been tried.
 
 ## Open questions
+
+- Converter's `.music` (from MIDI) and `.amp`/`.a` sound formats.
 
 - The pack header (bytes 3-0x16), the per-entry time and trailing u32, and
   the 32-bit value in each file's 12-byte header.
