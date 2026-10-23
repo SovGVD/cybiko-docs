@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cybiko converters</title>
+<meta name="description" content="Convert Cybiko Xtreme files in the browser: packs and archives, pictures, melodies, sound envelopes, recordings and MXD video clips.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Cybiko converters</h1>
+  <p>Open, convert and make Cybiko Xtreme files. Everything runs in this page: no file leaves your computer.
+    The same converters exist as <a href="https://github.com/SovGVD/cybiko-docs/tree/main/tools">Python tools</a>
+    and give the same bytes; the formats are in
+    <a href="https://github.com/SovGVD/cybiko-docs/blob/main/file-formats.md">file-formats.md</a>.</p>
+  <nav id="tabs">
+    <a href="#archives">Packs and archives</a>
+    <a href="#pictures">Pictures</a>
+    <a href="#melodies">Melodies</a>
+    <a href="#envelopes">Envelopes</a>
+    <a href="#recordings">Recordings</a>
+    <a href="#clips">MXD clips</a>
+  </nav>
+</header>
+
+<main>
+<!-- ======================================================================= -->
+<section id="archives" class="tool">
+  <h2>Packs and archives</h2>
+  <p class="lead">EZ Loader packs (<code>.cap</code>, <code>.csu</code>), CyOS archives (<code>.app</code>,
+    <code>.dl</code>, MXD clips) and flash dumps. Drop one in to see and save what it holds; a part in a format
+    this page knows has an <em>Open</em> button.</p>
+  <div class="drop" data-for="arc-file">
+    <input type="file" id="arc-file">
+    <span>Choose or drop a <code>.cap</code>, <code>.csu</code>, <code>.app</code>, <code>.dl</code> or flash dump</span>
+  </div>
+  <div id="arc-out" class="out"></div>
+
+  <h3>Make an archive</h3>
+  <p>Pack files into a CyOS archive (an application is a <code>main.e</code>, a <code>root.inf</code>, icons and
+    resources). Each part is compressed with CyOS's method 2 unless you tick <em>store</em> or it doesn't get
+    smaller; <code>root.inf</code> goes first.</p>
+  <div class="row">
+    <div class="drop small" data-for="pack-files">
+      <input type="file" id="pack-files" multiple>
+      <span>Choose or drop files</span>
+    </div>
+    <label class="button">Choose a folder<input type="file" id="pack-dir" webkitdirectory hidden></label>
+  </div>
+  <div id="pack-list" class="out"></div>
+  <div class="row">
+    <label>Name <input id="pack-name" value="new.app" size="18"></label>
+    <button id="pack-go" disabled>Make archive</button>
+  </div>
+  <div id="pack-out" class="out"></div>
+</section>
+
+<!-- ======================================================================= -->
+<section id="pictures" class="tool">
+  <h2>Pictures</h2>
+  <p class="lead"><code>.pic</code> pictures (four greys, the Cybiko's own) and <code>.xpic</code> (13 greys,
+    for Photo Viewer).</p>
+  <h3>Cybiko picture to PNG</h3>
+  <div class="drop" data-for="pic-file">
+    <input type="file" id="pic-file" accept=".pic,.xpic">
+    <span>Choose or drop a <code>.pic</code> or <code>.xpic</code></span>
+  </div>
+  <div id="pic-out" class="out"></div>
+
+  <h3>Picture to Cybiko</h3>
+  <p>Any picture the browser opens. PNG, BMP, PGM and PPM are read exactly as the Python tool reads them, so the
+    result is the same file; JPEG, GIF, WebP and others go through the browser's decoder.</p>
+  <div class="drop" data-for="img-file">
+    <input type="file" id="img-file" accept="image/*,.pgm,.ppm,.pnm">
+    <span>Choose or drop a picture</span>
+  </div>
+  <div class="opts" id="img-opts">
+    <label>Kind <select id="img-kind"><option value="2">.pic, 4 greys</option><option value="4">.xpic, 13 greys (Photo Viewer)</option></select></label>
+    <label>Size <input id="img-size" placeholder="fit 160x100" size="9" title="WxH, up to 255x255; empty: the picture's size, scaled down to fit the 160 x 100 screen"></label>
+    <label>Fit <select id="img-fit"><option value="pad">pad (white bars)</option><option value="crop">crop</option><option value="stretch">stretch</option></select></label>
+    <label>Dither <select id="img-dither"><option value="fs">Floyd-Steinberg</option><option value="none">none</option></select></label>
+    <label>Brightness <input id="img-brightness" type="number" value="0" min="-255" max="255" step="1"></label>
+    <label>Contrast <input id="img-contrast" type="number" value="1" min="0" step="0.05"></label>
+    <label>Gamma <input id="img-gamma" type="number" value="1" min="0.05" step="0.05" title="below 1 lightens"></label>
+  </div>
+  <div id="img-out" class="out"></div>
+</section>
+
+<!-- ======================================================================= -->
+<section id="melodies" class="tool">
+  <h2>Melodies</h2>
+  <p class="lead"><code>.mus</code> and <code>.music</code> melodies (the same format) to and from text and MIDI,
+    played the way the Cybiko's speaker plays them.</p>
+  <div class="drop" data-for="mus-file">
+    <input type="file" id="mus-file" accept=".mus,.music,.mid,.midi,.txt">
+    <span>Choose or drop a <code>.mus</code>, <code>.music</code>, <code>.mid</code> or a melody as text</span>
+  </div>
+  <div id="midi-opts" class="opts" hidden>
+    <div class="full" id="midi-tracks"></div>
+    <label>Transpose <input id="midi-transpose" type="number" value="0" step="1" title="semitones; 12 is an octave"></label>
+    <label>Overlapping notes <select id="midi-style"><option value="high">play the highest</option><option value="last">play the last pressed</option></select></label>
+    <label>Version <select id="midi-version"><option value="1">1 (as Converter)</option><option value="0">0 (older, F2 to C8)</option><option value="2">2 (with an envelope)</option></select></label>
+    <label class="v2">Envelope <input id="midi-envelope" type="number" value="0" min="0" max="60" title="CyOS's N.amp, 1-60; 0 for none"></label>
+    <label class="v2">Pulse, µs <input id="midi-pulse" type="number" value="1000" min="0" max="65535"></label>
+    <label class="v2">Volume <input id="midi-volume" type="number" value="128" min="0" max="255"></label>
+    <button id="midi-go">Convert</button>
+  </div>
+  <div id="mus-out" class="out"></div>
+  <details>
+    <summary>CyOS's sound envelopes (for version 2 melodies)</summary>
+    <p>Version 2 melodies use one of the 60 envelopes in CyOS's melody player (<code>1.amp</code> to
+      <code>60.amp</code>). They are Cybiko's, so this page doesn't have them: choose a dump of the Cybiko's flash
+      (the page finds the melody player's archive in it) or the <code>.amp</code> files. Without them, version 2
+      melodies play as plain tones.</p>
+    <div class="drop small" data-for="amp-src">
+      <input type="file" id="amp-src" multiple>
+      <span>Choose a flash dump or <code>.amp</code> files</span>
+    </div>
+    <p id="amp-status" class="note">No envelopes loaded.</p>
+  </details>
+  <h3>Text</h3>
+  <p>The melody as text you can edit. One item a line: a note and its length in ticks of 10 ms
+    (<code>C#5 10</code>; C4 is middle C), <code>rest 5</code>, <code>glide D5</code> and <code>vibrato 1</code>
+    after a note, <code>loop 0 3</code> &hellip; <code>next 0</code> (a part played 3 + 1 times), <code>raw 0xf8 0</code>.
+    Version 2 also has <code>pulse</code>, <code>volume</code> and <code>envelope</code> lines.</p>
+  <textarea id="mus-text" rows="14" spellcheck="false" placeholder="version 1&#10;C5 20&#10;E5 20&#10;G5 40"></textarea>
+  <div class="row">
+    <label>Sample rate <select id="mus-rate"><option>8000</option><option>11025</option><option selected>22050</option><option>44100</option></select></label>
+    <button id="mus-play">Play</button>
+    <button id="mus-save">Save as .music</button>
+    <button id="mus-midi">Save as MIDI</button>
+    <button id="mus-wav">Save as WAV</button>
+  </div>
+  <div id="mus-text-out" class="out"></div>
+</section>
+
+<!-- ======================================================================= -->
+<section id="envelopes" class="tool">
+  <h2>Sound envelopes</h2>
+  <p class="lead"><code>.amp</code> envelopes shape the loudness of the notes of version 2 melodies. This reads them
+    and writes Cybiko Converter's text (<code>.a</code>), and makes an <code>.amp</code> from that text. CyOS only uses
+    its own 60, so a new one is only heard by replacing one of those.</p>
+  <div class="drop" data-for="amp-file">
+    <input type="file" id="amp-file" accept=".amp,.a,.txt">
+    <span>Choose or drop an <code>.amp</code> or an <code>.a</code> text</span>
+  </div>
+  <div id="amp-out" class="out"></div>
+  <textarea id="amp-text" rows="10" spellcheck="false">Version   0        ; always 0
+Tdiscret  1.000    ; milliseconds between points (0.001 to 65.535)
+      0.0          ; the first level, 0.0 (silent) to 1.0 (loudest)
+1     1.0          ; the next point
+3     0.0          ; 3 points on, the 2 before it on a straight line
+end
+</textarea>
+  <div class="row">
+    <label>Name <input id="amp-name" value="envelope.amp" size="14"></label>
+    <button id="amp-make">Make .amp</button>
+  </div>
+  <div id="amp-make-out" class="out"></div>
+</section>
+
+<!-- ======================================================================= -->
+<section id="recordings" class="tool">
+  <h2>Recordings</h2>
+  <p class="lead">CyRecord and CyTalk record IMA ADPCM <code>.wav</code> files at 8000 Hz. A recording becomes an
+    ordinary 16-bit WAV; any 8 or 16-bit PCM WAV (any rate, mono or stereo) becomes a recording. Other sound
+    files (MP3, OGG...) are decoded by the browser first.</p>
+  <div class="drop" data-for="wav-file">
+    <input type="file" id="wav-file" accept=".wav,audio/*">
+    <span>Choose or drop a sound file</span>
+  </div>
+  <div class="opts">
+    <label>Gain <input id="wav-gain" type="number" value="1" min="0" step="0.1" title="multiplies the level before converting"></label>
+  </div>
+  <div id="wav-out" class="out"></div>
+</section>
+
+<!-- ======================================================================= -->
+<section id="clips" class="tool">
+  <h2>MXD clips</h2>
+  <p class="lead">Video clips for the MP3 cartridge: a 160 x 100 picture in four greys, up to five frames a second,
+    over an MP3 sound track. They are CyOS applications; put one on the cartridge's card.</p>
+  <h3>Play a clip</h3>
+  <div class="drop" data-for="clip-file">
+    <input type="file" id="clip-file" accept=".app">
+    <span>Choose or drop an MXD clip (<code>.app</code>)</span>
+  </div>
+  <div id="clip-out" class="out"></div>
+
+  <h3>Make a clip</h3>
+  <p>The clip's player program (<code>main.e</code>) is Cybiko's, so making a clip needs one of the clips from the
+    MP3 cartridge CD (<code>flavor.app</code>, <code>free.app</code>...) as a template. The picture comes from the
+    browser's video decoder, so it can differ slightly from the Python tool's (which uses ffmpeg); the rest is the
+    same.</p>
+  <div class="row">
+    <div class="drop small" data-for="mk-video"><input type="file" id="mk-video" accept="video/*,audio/*"><span>Video</span></div>
+    <div class="drop small" data-for="mk-template"><input type="file" id="mk-template" accept=".app"><span>Template clip</span></div>
+  </div>
+  <div class="opts">
+    <label>Name <input id="mk-name" placeholder="the file's name" size="14"></label>
+    <label>Frames a second <input id="mk-fps" type="number" value="5" min="1" max="5" step="0.5"></label>
+    <label>Start, s <input id="mk-start" type="number" value="0" min="0" step="0.1"></label>
+    <label>Length, s <input id="mk-duration" type="number" placeholder="all" min="0" step="0.1"></label>
+    <label>Fit <select id="mk-fit"><option value="crop">crop</option><option value="pad">pad</option></select></label>
+    <label>Dither <select id="mk-dither"><option value="fs">Floyd-Steinberg</option><option value="bayer">Bayer</option><option value="none">none</option></select></label>
+    <label>Gamma <input id="mk-gamma" type="number" value="1" min="0.1" step="0.05"></label>
+    <label>Sound <select id="mk-audio">
+      <option value="small">the video's, 64 kbps 22 kHz mono</option>
+      <option value="hifi">the video's, 128 kbps 44.1 kHz stereo</option>
+      <option value="file">an MP3 file</option>
+      <option value="none">none</option>
+    </select></label>
+    <div class="drop small" data-for="mk-mp3" id="mk-mp3-box" hidden><input type="file" id="mk-mp3" accept=".mp3,audio/mpeg"><span>MP3 for the sound</span></div>
+  </div>
+  <p class="note">The video's sound is turned into MP3 with <a href="https://github.com/zhuker/lamejs">lamejs</a>,
+    loaded from jsDelivr when first needed.</p>
+  <div class="row"><button id="mk-go" disabled>Make clip</button></div>
+  <div id="mk-out" class="out"></div>
+</section>
+</main>
+
+<footer>
+  <p>No Cybiko software or ROM is part of this page. Source and docs:
+    <a href="https://github.com/SovGVD/cybiko-docs/tree/main/web">cybiko-docs/web</a>.</p>
+</footer>
+
+<script src="lib/util.js"></script>
+<script src="lib/bzip2.js"></script>
+<script src="lib/cap.js"></script>
+<script src="lib/pic.js"></script>
+<script src="lib/music.js"></script>
+<script src="lib/amp.js"></script>
+<script src="lib/wav.js"></script>
+<script src="lib/mxd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

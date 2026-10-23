@@ -136,7 +136,7 @@ def pack_2bpp(levels, w, h):
 
 def make_icon(frame, dither, gamma):
     """A 25x18 picture from a frame, cropped to the icon's shape."""
-    cw = W * ICON_H * 25 // (H * 18)        # same aspect as the icon (139 wide)
+    cw = H * ICON_W // ICON_H               # same aspect as the icon (138 wide)
     x0 = (W - cw) // 2
     small = []
     for y in range(ICON_H):

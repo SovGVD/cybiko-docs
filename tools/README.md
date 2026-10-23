@@ -5,6 +5,10 @@ Python 3 tools for every Cybiko Xtreme file format worked out in
 except `cybiko_mxd.py`, which uses ffmpeg. Each one prints its full help
 when run with no arguments or `--help`.
 
+The same converters run in the browser, with nothing to install:
+[web/](../web/README.md) (online at https://sovgvd.github.io/cybiko-docs/).
+They give the same bytes as these tools.
+
 | Tool | Formats |
 | --- | --- |
 | [`cybiko_cap.py`](#cybiko_cappy-packs-and-archives) | EZ Loader packs (`.cap`, `.csu`), CyOS archives (`.app`, `.dl`), flash dumps |

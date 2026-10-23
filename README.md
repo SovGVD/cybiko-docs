@@ -21,6 +21,7 @@ check something, please open an issue.
 | [radio-protocol.md](radio-protocol.md) | Packets, CRCs and Reed-Solomon parity, Cybiko IDs, channels, pings, delivery, messages, Chat |
 | [cywig.md](cywig.md) | The Cybiko Wireless Internet Gate: finding a gate, packed messages, the WAP browser's requests, the original VCyWIG gate |
 | [tools/](tools/README.md) | Python converters for these formats: packs and archives, pictures, melodies (with MIDI), envelopes, recordings, MXD clips |
+| [web/](web/README.md) | The same converters in the browser, nothing to install: [sovgvd.github.io/cybiko-docs](https://sovgvd.github.io/cybiko-docs/) |
 | [mp3-cartridge.md](mp3-cartridge.md) | The MP3 cartridge (CY45P01): detection, the decoder's I2C and data lines, the SD card over SPI with DMA, its software, pitfalls |
 
 ## Projects that use this
