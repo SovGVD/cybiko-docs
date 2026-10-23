@@ -224,8 +224,9 @@ clip back into a video. The clip's player program is the free one from
 to the script); `--template` takes Cybiko's own from one of the CD's clips
 (`flavor.app`, `free.app`, ...) instead. Either needs the MP3 cartridge's
 software on the Cybiko. Options: `--name` (the desktop name), `--fps 1-5`,
-`--start S`, `--duration S`, `--fit crop|pad`, `--dither fs|bayer|none`,
-`--audio small|hifi`, `--gamma G`. Needs ffmpeg with libmp3lame.
+`--start S`, `--duration S`, `--fit crop|pad-white|pad-black` (bars in
+white or black; `pad` is `pad-white`), `--dither fs|bayer|none`,
+`--audio small|hifi|none` (none: a silent clip), `--gamma G`. Needs ffmpeg with libmp3lame.
 
 ```sh
 python3 cybiko_mxd.py trailer.mp4 trailer.app --duration 30

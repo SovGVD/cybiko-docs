@@ -149,7 +149,7 @@ Cybiko's own from one of the MP3 cartridge CD's clips (`flavor.app`,
 `free.app`...) instead, like the Python tool's `--template`. The options are
 the tool's: *Name* (`--name`, the desktop name; default the video's file name),
 *Frames a second* (`--fps`, 1-5), *Start* and *Length* in seconds
-(`--start`, `--duration`), *Fit* (`--fit crop|pad`), *Dither*
+(`--start`, `--duration`), *Fit* (`--fit crop|pad-white|pad-black`: fill the screen, or keep the whole picture with white or black bars), *Dither*
 (`--dither fs|bayer|none`), *Gamma* and *Sound*:
 
 - *the video's, 64 kbps 22 kHz mono* (`--audio small`) or *128 kbps 44.1
@@ -158,6 +158,9 @@ the tool's: *Name* (`--name`, the desktop name; default the video's file name),
   the first time) makes the MP3.
 - *an MP3 file*: used as it is (ID3 tags and a Xing/Info frame are taken
   off), without cutting it to *Start* and *Length*. Works offline.
+- *none* (`--audio none`): a silent clip, with no `music.mp3`. The free
+  player plays it without sound; Cybiko's player has not been tried with
+  one.
 
 The clip is built exactly as the Python tool builds it, but the frames come
 from the browser's video decoder and scaler, and the MP3 from lamejs, where

@@ -578,12 +578,12 @@
     const ctx = c.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingQuality = "high";
     const sw = v.videoWidth, sh = v.videoHeight;
-    const s = o.fit === "pad" ? Math.min(W / sw, H / sh) : Math.max(W / sw, H / sh);
+    const s = o.fit.startsWith("pad") ? Math.min(W / sw, H / sh) : Math.max(W / sw, H / sh);
     const dw = sw * s, dh = sh * s, frames = [];
     for (let k = 0; k < n; k++) {
       const t = Math.min(o.start + k / o.fps, dur - 0.001);
       if (Math.abs(v.currentTime - t) > 1e-6) { v.currentTime = t; await once(v, "seeked"); }
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = o.fit === "pad-black" ? "#000" : "#fff";
       ctx.fillRect(0, 0, W, H);
       ctx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
       const px = ctx.getImageData(0, 0, W, H).data, f = new Uint8Array(W * H);
@@ -651,7 +651,8 @@
       const frames = await videoFrames(video, o, (k, n) => { bar.max = n; bar.value = k; status.textContent = "Frame " + k + " of " + n; });
       status.textContent = "Making the sound...";
       bar.removeAttribute("value");
-      const music = o.audio === "file" ? C.mxd.plainMp3(await readFile($("mk-mp3").files[0])) : await videoSound(video, o);
+      const music = o.audio === "file" ? C.mxd.plainMp3(await readFile($("mk-mp3").files[0]))
+        : o.audio === "none" ? null : await videoSound(video, o);
       status.textContent = "Compressing...";
       await new Promise(r => setTimeout(r, 30));
       const clip = C.mxd.build({ frames, music, player, name, fps: o.fps, dither: o.dither, gamma: o.gamma });

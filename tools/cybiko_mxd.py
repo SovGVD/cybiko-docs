@@ -26,10 +26,13 @@ Options:
                       Cybiko cannot draw much faster and drops frames)
     --start S         start S seconds into the video
     --duration S      keep at most S seconds
-    --fit MODE        "crop" (default) fills the screen, "pad" adds bars
+    --fit MODE        "crop" (default) fills the screen; "pad-white" and
+                      "pad-black" keep the whole picture with white or
+                      black bars ("pad" is pad-white)
     --dither MODE     "fs" (Floyd-Steinberg, default), "bayer" or "none"
     --audio MODE      "small" (64 kbps 22 kHz mono, default) or "hifi"
-                      (128 kbps 44.1 kHz stereo, as most CD clips use)
+                      (128 kbps 44.1 kHz stereo, as most CD clips use),
+                      or "none" (a silent clip, with no music.mp3)
     --gamma G         brighten (<1) or darken (>1) the picture (default 1.0)
 
 Needs Python 3 and ffmpeg (with libmp3lame) on the PATH; Pillow and numpy
@@ -70,9 +73,9 @@ def time_args(a):
 
 def get_frames(a):
     """Grey 160x100 frames from ffmpeg, as lists of 0-255 values."""
-    if a.fit == "pad":
+    if a.fit.startswith("pad"):
         geo = ("scale=%d:%d:force_original_aspect_ratio=decrease,"
-               "pad=%d:%d:(ow-iw)/2:(oh-ih)/2:white" % (W, H, W, H))
+               "pad=%d:%d:(ow-iw)/2:(oh-ih)/2:%s" % (W, H, W, H, "black" if a.fit == "pad-black" else "white"))
     else:
         geo = ("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d" % (W, H, W, H))
     raw = run(["ffmpeg", "-v", "error"] + time_args(a) + ["-i", a.video, "-an",
@@ -85,6 +88,8 @@ def get_frames(a):
 
 
 def get_music(a):
+    if a.audio == "none":
+        return b""
     if a.audio == "hifi":
         fmt = ["-ac", "2", "-ar", "44100", "-b:a", "128k"]
     else:
@@ -236,9 +241,9 @@ def main():
     p.add_argument("--fps", type=float, default=5.0)
     p.add_argument("--start", type=float)
     p.add_argument("--duration", type=float)
-    p.add_argument("--fit", choices=("crop", "pad"), default="crop")
+    p.add_argument("--fit", choices=("crop", "pad", "pad-white", "pad-black"), default="crop")
     p.add_argument("--dither", choices=("fs", "bayer", "none"), default="fs")
-    p.add_argument("--audio", choices=("small", "hifi"), default="small")
+    p.add_argument("--audio", choices=("small", "hifi", "none"), default="small")
     p.add_argument("--gamma", type=float, default=1.0)
     a = p.parse_args()
     if not 1 <= a.fps <= 5:
@@ -248,7 +253,7 @@ def main():
     player = template_player(a.template) if a.template else free_player()
     frames = get_frames(a)
     music = get_music(a)
-    print("%d frames, %d KB of music" % (len(frames), len(music) // 1024))
+    print("%d frames, %s" % (len(frames), "%d KB of music" % (len(music) // 1024) if music else "no sound"))
 
     # clip.pic: u16 frame period in units of 0.1 ms, width and height as
     # bytes, then for each frame 0, 0, width, height and the picture.
@@ -261,13 +266,14 @@ def main():
     icon = make_icon(frames[len(frames) // 3], a.dither, a.gamma)
 
     print("compressing...      ")
-    archive = cybiko_cap.cy_archive([
-        ("music.mp3", music, False),
+    parts = [("music.mp3", music, False)] if music else []
+    archive = cybiko_cap.cy_archive(parts + [
         ("clip.pic", bytes(pic), True),
         ("main.e", player, True),
         ("root.inf", root_inf(name), True),
         ("0.ico", icon, False),
     ])
+
     with open(a.out, "wb") as f:
         f.write(archive)
     print("%s: %d KB, %.1f s" % (a.out, len(archive) // 1024, len(frames) / a.fps))

@@ -391,28 +391,29 @@ async function testMxd() {
   // A made-up player stands in for Cybiko's main.e.
   const player = new Uint8Array(3000).map((_, i) => (i * 31 + (i >> 5)) & 255);
   fs.writeFileSync(tpl, C.cap.cyArchive([{ name: "main.e", data: player, compress: true }]));
-  for (const o of [{ fit: "crop", dither: "fs", gamma: 1.0, fps: 5 }, { fit: "pad", dither: "bayer", gamma: 0.8, fps: 3 },
+  for (const o of [{ fit: "crop", dither: "fs", gamma: 1.0, fps: 5 }, { fit: "pad-white", dither: "bayer", gamma: 0.8, fps: 3 },
+    { fit: "pad-black", dither: "fs", gamma: 1.0, fps: 4, audio: "none" },
     { fit: "crop", dither: "none", gamma: 1.2, fps: 2, free: true }]) {
     // free: the free player (no --template), which both carry
     const what = "mxd " + JSON.stringify(o);
     py("cybiko_mxd.py", [video, out, ...(o.free ? [] : ["--template", tpl]), "--name", "Test clip", "--fps", String(o.fps),
-      "--fit", o.fit, "--dither", o.dither, "--gamma", String(o.gamma)]);
+      "--fit", o.fit, "--dither", o.dither, "--gamma", String(o.gamma), ...(o.audio ? ["--audio", o.audio] : [])]);
     await guard(what, () => {
       // The same ffmpeg calls as cybiko_mxd.py's get_frames and get_music.
-      const geo = o.fit === "pad"
-        ? "scale=160:100:force_original_aspect_ratio=decrease,pad=160:100:(ow-iw)/2:(oh-ih)/2:white"
+      const geo = o.fit.startsWith("pad")
+        ? "scale=160:100:force_original_aspect_ratio=decrease,pad=160:100:(ow-iw)/2:(oh-ih)/2:" + (o.fit === "pad-black" ? "black" : "white")
         : "scale=160:100:force_original_aspect_ratio=increase,crop=160:100";
       const raw = execFileSync("ffmpeg", ["-v", "error", "-i", video, "-an", "-vf", "fps=" + o.fps + "," + geo + ",format=gray",
         "-f", "rawvideo", "-pix_fmt", "gray", "-"], { maxBuffer: 1 << 28 });
       const frames = [];
       for (let i = 0; i + 16000 <= raw.length; i += 16000) frames.push(new Uint8Array(raw.subarray(i, i + 16000)));
-      const music = execFileSync("ffmpeg", ["-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", "22050", "-b:a", "64k",
+      const music = o.audio === "none" ? new Uint8Array(0) : execFileSync("ffmpeg", ["-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", "22050", "-b:a", "64k",
         "-c:a", "libmp3lame", "-map_metadata", "-1", "-id3v2_version", "0", "-write_xing", "0", "-f", "mp3", "-"]);
       const js = C.mxd.build({ frames, music: C.mxd.plainMp3(new Uint8Array(music)), player: o.free ? C.mxd.freePlayer() : C.mxd.templatePlayer(read(tpl)),
         name: "Test clip", fps: o.fps, dither: o.dither, gamma: o.gamma });
       checkBytes(what, js, out);
       const clip = C.mxd.parse(js);
-      check(what + " parse", clip.frames.length === frames.length && same(clip.music, music), "frames or sound differ");
+      check(what + " parse", clip.frames.length === frames.length && same(clip.music || new Uint8Array(0), music), "frames or sound differ");
     });
   }
 }

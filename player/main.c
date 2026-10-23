@@ -154,16 +154,29 @@ static void poll(long wait)
     }
 }
 
+/* sound.dl isn't asked for a part the clip doesn't have: it crashes. */
+static int has_part(const char *name)
+{
+    struct Input *in = cy_Archive_open_Ex(PROCESS_ARCHIVE(me), name);
+    if (!in) return 0;
+    drop(in);
+    return 1;
+}
+
 /* Opens music.mp3 (or music.wav) and connects it to the cartridge's
- * decoder (or the speaker). 0: no sound, 1: ready, 2: the codec is busy. */
+ * decoder (or the speaker). 0: no sound (the clip has none), 1: ready,
+ * 2: the codec is busy. */
 static int sound_open(void)
 {
-    const char *name, *device;
+    const char *name, *device, *part;
     void *fi, *fo;
+    if (!has_part("music.mp3")) {
+        if (!has_part("music.wav")) return 0;     /* a silent clip */
+        part = ":music.wav";
+    } else part = ":music.mp3";
     sys = cy_sound_system();
     if (!sys) return 0;
-    src = M1(sys, SYS_OPEN_INPUT, ":music.mp3");
-    if (!src) src = M1(sys, SYS_OPEN_INPUT, ":music.wav");
+    src = M1(sys, SYS_OPEN_INPUT, part);
     if (!src) return 0;
     fi = M0(src, ANY_FORMAT);
     name = fi ? M0(fi, FMT_NAME) : 0;

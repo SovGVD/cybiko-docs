@@ -22,6 +22,9 @@ And beyond it:
 
 - **Esc** stops the clip.
 - Frames **smaller than the screen** are drawn at their x and y.
+- A clip **without sound** (no `music.mp3` or `music.wav`) plays silently.
+  It checks first, because `sound.dl` crashes when asked for a part that
+  isn't there.
 
 **Tested** in Dragonfruit's PC runner (`cybiko_host`, with the MP3
 cartridge emulated): with the CD clip `hungry.app`'s frames and music, the

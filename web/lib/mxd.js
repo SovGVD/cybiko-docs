@@ -123,7 +123,7 @@
     for (const f of frames) pic.bytes([0, 0, W, H]).bytes(X.pack2bpp(X.toLevels(f, W, H, dither, gamma), W, H));
     const icon = X.makeIcon(frames[Math.floor(frames.length / 3)], dither, gamma);
     return C.cap.cyArchive([
-      { name: "music.mp3", data: music, compress: false },
+      ...(music && music.length ? [{ name: "music.mp3", data: music, compress: false }] : []),
       { name: "clip.pic", data: pic.done(), compress: true },
       { name: "main.e", data: player, compress: true },
       { name: "root.inf", data: X.rootInf(name), compress: true },
