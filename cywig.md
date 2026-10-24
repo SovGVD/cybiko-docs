@@ -63,6 +63,11 @@ Only Cybikos that hear the gate directly can use it: Cybikos don't relay
 packets, and a Cybiko that hears a gate doesn't pass it on
 ([radio-protocol.md](radio-protocol.md#10-mesh-gates-and-the-internet)).
 
+CyOS 1.5.08 can be a gate itself: export 1152 switches a gate-mode byte
+(4b4ac6 is next to it, the byte is 4b4ab6) and its packet builder then sets
+flag 04 on what it sends; export 718 reads the byte back (**from the
+code**, see [usb.md](usb.md#7-a-gate-over-usb)).
+
 A gate makes itself heard with pings: type 00 with flag 04 (byte 9 =
 `04`), bytes a-b as a running counter, data all zeros. Any packet with flag
 04 does the same job, but pings keep the gate in the list while it is

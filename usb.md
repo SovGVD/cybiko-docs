@@ -21,7 +21,8 @@ cable yet: the emulators so far ignore the USB chip.
 4. [The CyOS console](#4-the-cyos-console)
 5. [Pipes and the Multi Channel Protocol](#5-pipes-and-the-multi-channel-protocol)
 6. [Using a pipe from an application](#6-using-a-pipe-from-an-application)
-7. [Open questions](#7-open-questions)
+7. [A gate over USB](#7-a-gate-over-usb)
+8. [Open questions](#8-open-questions)
 
 ## 1. The chip
 
@@ -202,7 +203,26 @@ to get a pipe:
 - Open a pipe by number itself through the factory (exports 1784 and
   1680).
 
-## 7. Open questions
+## 7. A gate over USB
+
+Everything a PC-side gate ([cywig.md](cywig.md)) needs is in stock CyOS
+1.5.08, so a plain Xtreme can be a gate with no change to its flash:
+
+- **Gate mode is a kernel switch.** Export **1152** (49ff44) stores a byte
+  at 4b4ab6, and export **718** (49ff4c) reads it back. CyOS's packet
+  builder (49c864) sets **flag 04 in byte 9** of the packet when that byte
+  is not 0, which is the gate flag other Cybikos look for
+  ([cywig.md](cywig.md#2-finding-the-gate)). (**From the code**. Not yet
+  run; whether every packet, pings and acknowledgements included, goes
+  through that builder still has to be checked.)
+- **The cable**: an application on the Xtreme opens a pipe (section 6),
+  takes the gate's requests from the radio (port 93) and passes them to the
+  PC, and sends the PC's answers back over the radio.
+- **Installing and starting it**: the PC can copy the application with
+  `rcv` and start it with a command line, so nothing has to be done on the
+  Xtreme itself.
+
+## 8. Open questions
 
 - MCP's framing on the bulk endpoints: headers, pipe numbers, flow
   control, acknowledgements. Which endpoint pair carries what.

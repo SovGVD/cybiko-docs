@@ -435,6 +435,6 @@ All **MAME / datasheet**, used by CyOS as noted.
 - Which A/D channel reads the battery, and its scale.
 - The exact HD66421 shade formula.
 - Which pins of the serial/USB connector carry SCI1.
-- How CyOS's Multi Channel Protocol frames data on USB ([usb.md](usb.md#7-open-questions)).
+- How CyOS's Multi Channel Protocol frames data on USB ([usb.md](usb.md#8-open-questions)).
 
 If you have a real Cybiko and can check any of these, please open an issue.
