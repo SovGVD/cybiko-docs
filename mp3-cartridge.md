@@ -50,13 +50,20 @@ expansion port:
 | I2C SDA | P2.3 | in/out (open drain) | decoder control data |
 | SD chip select | P2.2 | out | low selects the card |
 | Card detect | P2.0 | in | low while a card is in the slot |
+| Write protect | P3.2 | in | high: the card is write-protected |
 | MPEG data | SCI0, clocked synchronous | out | compressed audio to the decoder |
 | DEMAND | P6.6 and IRQ2 | in | the decoder wants more data |
 | SD card | SCI1, clocked synchronous | in/out | the card in SPI mode |
 
 Port 3 is also set up when the cartridge starts (P3DDR 0x33 / 0x11 and data
-0x0c / 0x2e are written). Those bits set the SCI pin directions; nothing on
-the cartridge seemed to need modelling for them. (Observed.)
+0x0c / 0x2e are written). Those bits set the SCI pin directions. P3.2 stays
+an input: it is the card's **write-protect** switch. When the card goes in,
+the card driver samples it ten times, 100 loops apart, and takes the card as
+write-protected if more than six samples read 1. The FAT layer (`sddisk.dl`)
+then refuses every change: deleting fails with error 6, which File Manager
+shows as "The file is not found. Please restart the application." With P3.2
+low, deleting and writing work. (Verified: found by disassembly, then
+deleting worked in an emulator once P3.2 read 0.)
 
 ### 1.2 Detection
 

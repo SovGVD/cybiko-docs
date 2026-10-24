@@ -159,6 +159,7 @@ transfers instead of running code ([§14](#14-other-on-chip-peripherals)).
 |---|---|---|
 | P15 | out | speaker ([§9](#9-sound)) |
 | port 2 | both | cartridge connector: I2C to the MP3 decoder, SD chip select, card detect |
+| P32 | in | MP3 cartridge: the card's write-protect switch, 1 = protected |
 | P66 | in | MP3 decoder DEMAND line |
 | PA6 | in | 1 = battery charged |
 | PA7 | in | On/Off button, 0 = pressed (also IRQ7) |
@@ -341,6 +342,14 @@ CyOS builds on them (pings, acknowledgements, messages, chat, gates), are in
 it does on the air (modulation, preamble, framing) is not known. Its
 program came with CyOS updates as `avr*.boot` files
 ([file-formats.md](file-formats.md#cyos-update-images-boot)).
+
+**The status LED** blinks red while the radio sends and green while it
+receives, and is steady red on mains or USB power (the Xtreme quick start
+guide's FAQ). Which pins drive it is not known. CyOS changes no port pin
+while it sends a packet, so red is probably the AVR's or the charger's.
+`rfdriver` raises P17 for the ~20 ms a heard packet takes to come in
+(49c364 sets it, 49c4c2 clears it), which may be the green LED or a signal
+to the AVR. (**Guess**; the timing is **Verified** in an emulator.)
 
 **CyTalk, the walkie-talkie,** takes the radio away from packets. About
 3.5 s after Talk is pressed, CyOS sends `01 02 02` and `01 07 00 00` to
