@@ -23,6 +23,7 @@ check something, please open an issue.
 | [tools/](tools/README.md) | Python converters for these formats: packs and archives, pictures, melodies (with MIDI), envelopes, recordings, MXD clips |
 | [player/](player/README.md) | Free players for MXD clips (their `main.e`), simple or with pause, seek and volume, so new clips need no file from the CD |
 | [web/](web/README.md) | The same converters in the browser, nothing to install: [sovgvd.github.io/cybiko-docs](https://sovgvd.github.io/cybiko-docs/) |
+| [usb.md](usb.md) | The USB port: the USBN9604 chip, descriptors (VID 0B66), EZ Loader's command lines, the CyOS console, pipes and how an application can use them |
 | [mp3-cartridge.md](mp3-cartridge.md) | The MP3 cartridge (CY45P01): detection, the decoder's I2C and data lines, the SD card over SPI with DMA, its software, pitfalls |
 
 ## Projects that use this

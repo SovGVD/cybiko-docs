@@ -6,7 +6,7 @@ are wired. It is written for anyone who wants to write an emulator, poke at
 a real machine or just understand the thing. How CyOS boots and stores
 files is in [cyos.md](cyos.md); the radio's packets in
 [radio-protocol.md](radio-protocol.md); the MP3 cartridge in
-[mp3-cartridge.md](mp3-cartridge.md).
+[mp3-cartridge.md](mp3-cartridge.md); USB in [usb.md](usb.md).
 
 Nothing here comes from Cybiko Inc. documents. The sources are MAME's
 `cybikoxt` driver and its H8 peripheral models (Tim Schuerewegen, Olivier
@@ -74,7 +74,7 @@ do not run on the Xtreme. This document is about the Xtreme only.
 |---|---|---|
 | 000000-03ffff | 32 KB, mirrored | boot ROM |
 | 100000-100001 | 2 bytes | HD66421 LCD: 100000 index register, 100001 data |
-| 200000-200003 | | USB controller (not worked out) |
+| 200000-200003 | | USBN9604 USB controller: 200003 register number, 200000 value ([usb.md](usb.md)) |
 | 400000-5fffff | 2 MB | DRAM. 400000-47ffff is the RAM disk |
 | 600000-7fffff | 512 KB, mirrored | SST39VF400A flash, 16 bits wide |
 | 800000-dfffff | | nothing (an emulator can put a bigger RAM disk here, see [cyos.md](cyos.md#the-ram-disk)) |
@@ -435,6 +435,6 @@ All **MAME / datasheet**, used by CyOS as noted.
 - Which A/D channel reads the battery, and its scale.
 - The exact HD66421 shade formula.
 - Which pins of the serial/USB connector carry SCI1.
-- The USB controller at 200000.
+- How CyOS's Multi Channel Protocol frames data on USB ([usb.md](usb.md#7-open-questions)).
 
 If you have a real Cybiko and can check any of these, please open an issue.
