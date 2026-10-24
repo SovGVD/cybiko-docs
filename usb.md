@@ -11,7 +11,8 @@ an MSI; its `Data.Cab` holds the drivers and COM DLLs), and CyOS 1.5.08's
 kernel as it sits in RAM after booting in an emulator. Marks as in
 [hardware.md](hardware.md): **Verified**, **From the code** (read in the
 disassembly, not run), **Guess**. Nothing here has been run over a real USB
-cable yet: the emulators so far ignore the USB chip.
+cable yet; "Verified" below means run against CyOS in Dragonfruit's
+emulator, which models the USB chip since October 2026.
 
 ## Contents
 
@@ -57,7 +58,8 @@ USBN960x register map:
 interrupt line and the meaning of register 1b were not checked.)
 
 MAME maps only a write handler there that does nothing, so CyOS in MAME
-never sees a USB host. The Dragonfruit emulator does the same.
+never sees a USB host. Dragonfruit's emulator models the chip
+(`cy_usb.c`), and its PC build can plug an emulated PC into it.
 
 ## 2. What the PC sees
 
@@ -173,11 +175,70 @@ slot 7 (`+1c`) says whether it is broken or closed, slot 4 (`+10`) gives
 its input stream and slot 5 (`+14`) its output stream; each stream keeps
 its timeout at +4. (**From the code**.)
 
-How MCP frames pipes into the bulk endpoints is **not worked out yet**.
-Both sides are available to read it from: CyOS (kernel 4ac300-4ad9xx for
-the USB driver, 4ae300-4af9xx for the pipes and MCP) and `Cybiko15.dll` /
-`cybiko15.sys`. **Guess**: one endpoint pair for the console and one for
-data, as the descriptors and `nConsoleIn`/`nDataIn` suggest.
+### Frames
+
+**Verified** in an emulator (Dragonfruit's `cybiko_host --usb`, which
+models the USBN9604 and plays the PC), decoded from the kernel (receiver
+4aa984-4ab300, sender 4a9f80). Every frame, in both directions, goes over
+**bulk OUT 2** (PC to Xtreme) and **bulk IN 1** (Xtreme to PC); endpoints
+3 and 4 are not used (an OUT on 4 is thrown away and answered with an
+empty packet on IN 3).
+
+```text
+'M' 'M' type pipe seq len_hi len_lo body[len] crc32 (4 bytes, big endian)
+```
+
+- `type`: **11** data (body up to 512 bytes), **12** control (body up to 4
+  bytes; CyOS always sends 4, only the first two mean anything).
+- `pipe`: 1-255, one direction each (below).
+- `seq`: the data frame's number, 8 bits, counting from 0 on each pipe.
+  0 in control frames.
+- The CRC is the usual CRC-32 (reflected, start ffffffff, final
+  complement; the table is in the boot ROM at 0x4e0) over everything from
+  the first `M` to the end of the body.
+- A transfer may hold several frames or part of one; CyOS ends its own
+  transfers with a short packet.
+
+### Flow control
+
+The same in both directions. The receiving end asks for data frame N with
+a control frame `02 N`; the sending end sends frame N **only when asked**,
+and takes `02 N+1` (or `03 N`) as the acknowledgement. CyOS asks again
+about every 3 s while it waits. When nobody asks for a frame within the
+stream's timeout (3 s for the console), CyOS gives that write up, so a PC
+has to keep asking on every pipe it reads. CyOS sends `05` on a pipe when
+it closes it (the next user starts again at frame 0) and takes `04` as a
+reset. Links count as up while frames arrive: CyOS stops sending 5 s
+after the last frame from the PC.
+
+### Pipe numbers
+
+| Pipe | Direction | What |
+| --- | --- | --- |
+| 1 | PC to Xtreme | console command lines, each ending in a **NUL** byte (not CR) |
+| 2 | Xtreme to PC | console output: an echo (`>> ver`), the answer, `Ready >` |
+| 2N-1 | PC to Xtreme | input of a program started with `$pipe=N` |
+| 2N | Xtreme to PC | its output |
+
+So pipe numbers in command lines (`$pipe=15`) are "logical" pipes, each a
+pair of MCP pipes: `id $pipe=15` answers on MCP pipe 30. The kernel's pipe
+for the console is opened by name, `std`, as logical pipe 1.
+
+A whole session, as the emulator ran it:
+
+```text
+PC -> 12 02 00  02 00              ask for console frame 0
+   <- 11 02 00  "\nReady >\n \0"
+PC -> 12 02 00  02 01              got it, ask for 1
+PC -> 11 01 00  "ver\0"            a command line
+   <- 12 01 00  02 01 xx xx        got it
+   <- 11 02 01  "\n>> ver"         (each answered with 02 N+1 as above)
+   <- 11 02 02  "\nCyOS v. 1.5.08 built Jul 26 2002 19:02:01"
+   <- 11 02 03  "\nReady >\n "
+```
+
+A PC-side implementation (C, libusb or the emulator underneath) is in
+cybiko-browser's `usb/` folder (`cymcp.c`, `cymcp_link.c`).
 
 ## 6. Using a pipe from an application
 
@@ -224,9 +285,8 @@ Everything a PC-side gate ([cywig.md](cywig.md)) needs is in stock CyOS
 
 ## 8. Open questions
 
-- MCP's framing on the bulk endpoints: headers, pipe numbers, flow
-  control, acknowledgements. Which endpoint pair carries what.
-- The console's own pipe numbers and how the PC reaches the prompt.
+- What control `03` is sent for, and bytes 2-3 of CyOS's control frames
+  (`00 64` or leftovers).
 - The exact arguments of exports 1648-1687.
 - Whether CyOS needs VBUS (USB power) to switch the controller on, and
   what the `pc on` listeners do (radio off during sync?).
