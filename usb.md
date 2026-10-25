@@ -23,7 +23,8 @@ emulator, which models the USB chip since October 2026.
 5. [Pipes and the Multi Channel Protocol](#5-pipes-and-the-multi-channel-protocol)
 6. [Using a pipe from an application](#6-using-a-pipe-from-an-application)
 7. [A gate over USB](#7-a-gate-over-usb)
-8. [Open questions](#8-open-questions)
+8. [Control requests and WinUSB without Zadig](#8-control-requests-and-winusb-without-zadig)
+9. [Open questions](#9-open-questions)
 
 ## 1. The chip
 
@@ -87,7 +88,9 @@ ep       07 05 04 02 40 00 00     bulk OUT 4, 64 bytes
 drivers' `.inf` files, **Verified**.) Being vendor class, no operating
 system binds a driver to it by itself; any program can claim it through
 libusb (on Windows after giving it the WinUSB driver, for example with
-Zadig). The original drivers (`cybiko15.sys`, `cy15boot.sys`, 2001) are
+Zadig, or with an application that adds Microsoft OS descriptors, see
+[section 8](#8-control-requests-and-winusb-without-zadig)). cybiko-cywig's
+USB Gate shows up as **PID 0042** while it runs. The original drivers (`cybiko15.sys`, `cy15boot.sys`, 2001) are
 Windows 98/2000 WDM drivers.
 
 ## 3. The PC software
@@ -328,7 +331,63 @@ and chatted through it), not yet on a real cable.
   console line (`USBGate.app`). Copying it over the cable (`rcv`) is still
   to be worked out; EZ Loader does it.
 
-## 8. Open questions
+## 8. Control requests and WinUSB without Zadig
+
+CyOS 1.5.08 answers control requests on endpoint 0 in its USB interrupt;
+the kernel and its tables are in RAM (**From the code**, **Verified** in
+the emulator):
+
+| Address | What |
+| --- | --- |
+| 4acc00 | endpoint 0 receive handler: on a SETUP it copies the 8 bytes to its control state + 6 (er0 is the state) |
+| 4accb2 | `(bmRequestType & 60) != 0` (class or vendor): straight to 4acd56, which sends whatever is in the FIFO (nothing: an empty data stage, never a STALL) |
+| 4accba | standard: switch on bRequest 1-9 through the table at 48384a |
+| 4aca10 | GET_DESCRIPTOR: switch on the type 1-5 through 483836; other types get an empty answer |
+| 4838c2 | device descriptor, then the configuration (4838d4) |
+| 48388a | string descriptors: **index N is the descriptor at 48388a + N** (a byte offset, not a number: 0 is the language list, 04 the manufacturer, 1c the product); index 38 is one built at 4b4c68 |
+| 4ace26 | endpoint 0 transmit handler: the next 8 bytes of a descriptor |
+
+GET_DESCRIPTOR keeps its answer in the control state: +0f set while
+sending, +10 the data, +14 bytes sent, +16 its length (cut to the
+request's wLength, of which only the low byte is used); the first 8 bytes
+go into TXD0 (register 21) at once and 4acd56 sends them as DATA1, the
+transmit handler sends the rest. CyOS never stalls, and as far as the
+USBN9604 datasheet goes, clearing EPC0's STALL bit after a SETUP is left to
+software (**Guess**; Dragonfruit's model clears it on a SETUP).
+
+Windows loads WinUSB for a device by itself only when the device has
+**Microsoft OS 1.0 descriptors** ("WCID": string descriptor `ee` =
+`MSFT100` and a vendor request code, then that vendor request with wIndex
+4 gives the compatible ID `WINUSB`, wIndex 5 the extended properties), it
+says **USB 2.0** (Windows doesn't ask a USB 1.1 device), and Windows
+hasn't seen that VID/PID/release before (it keeps the answer under
+`HKLM\SYSTEM\CurrentControlSet\Control\usbflags`). CyOS has none of it
+(string `ee` is whatever happens to be at 483978), so cybiko-cywig's USB
+Gate, an ordinary application, adds it while it runs, all in RAM:
+
+- It replaces the 8 bytes at 4accb2 with a `jmp` to code of its own that
+  calls a C function with the control state, answers string `ee`, the two
+  vendor requests (code 47) and, as a full speed USB 2.0 device must,
+  stalls GET_DESCRIPTOR 06/07 (lifting the stall at the next SETUP), the
+  way GET_DESCRIPTOR answers (state +0f/+10/+14/+16 and 8 bytes into TXD0,
+  then on to 4acd56); everything else goes on to the original check.
+- It writes `0200` (bcdUSB) and PID `0042` into the device descriptor at
+  4838c2.
+- It clears **MCNTRL.NAT** (register 00 bit 3; CyOS writes `c8`) for
+  400 ms: the pull-up goes, the host sees the device leave and come back,
+  resets it and reads the new descriptors.
+- On exit it puts the 8 bytes and the descriptor back and drops off the
+  bus again. It checks those bytes before changing anything.
+
+Register writes from an application go to 200003 (the register number)
+then 200000 with interrupts off (`orc #80,ccr`), since the USB interrupt
+uses the same pair. The MCP pipes keep their sequence numbers across the
+drop: a PC program that opens the device again has to take up the
+Xtreme's numbers (cybiko-browser `usb/cymcp_link.c` does). **Verified** in
+Dragonfruit's emulator (its USB host asks for the descriptors like Windows
+and logs them); not yet on a real Xtreme with Windows.
+
+## 9. Open questions
 
 - What control `03` is sent for, and bytes 2-3 of CyOS's control frames
   (`00 64` or leftovers).
