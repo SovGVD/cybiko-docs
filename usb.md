@@ -267,21 +267,66 @@ to get a pipe:
 ## 7. A gate over USB
 
 Everything a PC-side gate ([cywig.md](cywig.md)) needs is in stock CyOS
-1.5.08, so a plain Xtreme can be a gate with no change to its flash:
+1.5.08, so a plain Xtreme can be a gate with no change to its flash. The
+USB Gate application and its PC program
+([cybiko-cywig](https://github.com/SovGVD/cybiko-cywig)) do this; all of the
+below is **Verified** in Dragonfruit's emulator (a radio Cybiko loaded pages
+and chatted through it), not yet on a real cable.
 
-- **Gate mode is a kernel switch.** Export **1152** (49ff44) stores a byte
-  at 4b4ab6, and export **718** (49ff4c) reads it back. CyOS's packet
-  builder (49c864) sets **flag 04 in byte 9** of the packet when that byte
-  is not 0, which is the gate flag other Cybikos look for
-  ([cywig.md](cywig.md#2-finding-the-gate)). (**From the code**. Not yet
-  run; whether every packet, pings and acknowledgements included, goes
-  through that builder still has to be checked.)
-- **The cable**: an application on the Xtreme opens a pipe (section 6),
-  takes the gate's requests from the radio (port 93) and passes them to the
-  PC, and sends the PC's answers back over the radio.
-- **Installing and starting it**: the PC can copy the application with
-  `rcv` and start it with a command line, so nothing has to be done on the
-  Xtreme itself.
+| Export | Address | What |
+| --- | --- | --- |
+| 1152 | 49ff44 | `set_gate_mode(on)`: a byte at 4b4ab6 |
+| 718 | 49ff4c | reads that byte back |
+| 1079 | 49db50 | sends a ping: (radio, RF channel) |
+| 888 | 4b4a8e | data: the radio object those take |
+| 1109 | 49fc70 | radio power: (on) wakes the radio when it sleeps |
+| 1044 | 4b49fe | data: the radio's channel object |
+| 1161 | 49ca04 | sets the working channel: (channel object, RF channel 2-9) |
+| 1072 | 49ca66 | reads it: (channel object) |
+| 1140 | 49dc60 | (radio, on): allows CyOS's own pings |
+| 237 | 49785e | `Process_ctor(memory, name, stack)` |
+| 940 | | `Queue_peek_message(queue, remove, min msgid, max msgid)` |
+| 943 | 49ddf4 | `Message_post` |
+| 501 | 49dfb4 | `Message_deliver` |
+| 1604, 1607 | | MCP input: bytes waiting; `read(stream, buffer, length)` (-1: no PC) |
+| 1621, 1622, 1628 | | MCP output: room; flush; `write(stream, buffer, length)` |
+
+- **Gate mode.** With the byte from export 1152 set, CyOS's packet builder
+  (49c864) sets **flag 04 in byte 9** of everything it sends, pings and
+  acknowledgements included. Others then take the Xtreme for a gate
+  ([cywig.md](cywig.md#2-finding-the-gate)).
+- **Being heard.** An idle Xtreme doesn't ping (its radio task, 49d6bc,
+  only pings while the radio is "on", state 1 at 4b4aaa, and goes to sleep
+  waiting for nothing otherwise), so a gate nobody hears isn't one. The
+  application pings itself every 3 s with export 1079 on the base channel.
+  A ping goes out with flag 04 and the working channel in byte 8.
+- **Port 93.** A process made with a port number for its name
+  (`Process_ctor(memory, (char *)0x93, stack)`, never started) gets that
+  port's messages in its queue (+6c). CyOS keeps the queues that take
+  messages in a ring: `*(radio + b8c)` is the last one, `+34` the next,
+  `+28` the port or name. The first queue for a port from the start of the
+  ring gets the message.
+- **The cable.** The application opens logical pipe 40 through the factory
+  (exports 1784 and 1680), takes its streams from the pipe's methods (slots
+  4 and 5 at pipe + 8) and sets their timeouts at `*(stream) + 4`. CyOS
+  only asks the PC for data inside a blocking read, so a thread of its own
+  sits in the read.
+- **Answers.** `Message_deliver` with the target's process name (the WAP
+  browser's is `WAP`) and its ID; `Message_check_delivery` says when it's
+  done.
+- **Chat.** Chat's rooms are on RF channel 4 (export 1161 moves the radio
+  there; Cybikos then send to the gate on channel 4 too, as its pings say).
+  Port 25 already has a queue from start-up, owned by a resident part of
+  CyOS; a second queue for port 25 gets nothing, and moving that one aside
+  or putting another in front of it in the ring stalls CyOS (the USB link
+  stops, then the watchdog resets it). Taking only the chat lines from it
+  with `Queue_peek_message(queue, 1, 0x1002, 0x1002)` works. A line to
+  everyone goes out with `Message_post` to `ffffffff` and port 25
+  (`Message_deliver` waits for an answer that never comes and doesn't send
+  it).
+- **Installing and starting it.** The PC starts the application with a
+  console line (`USBGate.app`). Copying it over the cable (`rcv`) is still
+  to be worked out; EZ Loader does it.
 
 ## 8. Open questions
 
@@ -292,6 +337,8 @@ Everything a PC-side gate ([cywig.md](cywig.md)) needs is in stock CyOS
   what the `pc on` listeners do (radio off during sync?).
 - Register 1b and the interrupt wiring of the USBN9604.
 - The boot ROM's USB mode (PID 0040) and its protocol.
+- What the resident owner of port 25 (and 2c) is, and why it must keep the
+  port; the `rcv` protocol for copying files.
 
 If you have a real Xtreme and a USB analyser (or Windows 98 with EZ
 Loader), a capture of EZ Loader listing files would answer most of these.
