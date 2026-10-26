@@ -219,6 +219,41 @@ With Fn, the letter row Q-P types the digits, and the other letters the
 symbols `@ } (C) $ % * + - _ = > < & { # "` (**Verified** in CyOS 1.5.08).
 On/Off is not in the matrix: it is PA7/IRQ7.
 
+### Reading the matrix on a real Cybiko
+
+**A single CPU read does not work on real hardware.** The rows are selected
+by address lines, which need the address held on the bus for a while before
+the keys can be read. A lone `mov.w @e00000+2*sel` between instruction
+fetches from DRAM reads noise or no key at all. Emulators (MAME, Dragonfruit)
+answer at once, so code that works there can still see no key on a real
+Cybiko. (**Verified** on a real Xtreme with
+[cybiko-doom](https://github.com/SovGVD/cybiko-doom): with single CPU reads
+no key worked and the reads looked like random keys. With the DMA reads
+below every key works.)
+
+CyOS 1.5.08 reads every row with the DMA controller (its routine was at
+4a019c in RAM in the emulator, called with the row's address):
+
+1. Clear bit 0 of DRAMCR (fffed7), which stops the refresh timer.
+2. Stop DMA channel 1: clear bits 6 and 7 of DMABCRL (ffff07).
+3. Set MAR1A (fffef0) to the row's address, e00000 + 2 × *sel*. Set MAR1B
+   (fffef8) to a word of on-chip RAM (CyOS uses ffdc00). Set ETCR1A
+   (fffef6) to 12.
+4. Set bits 7 and 3 of DMABCRH (ffff06) for full address mode. Clear bit 3
+   of DMABCRL.
+5. Write 80 to DMACR1A (ffff04): words, with source and destination fixed.
+   Write 07 to DMACR1B (ffff05): auto request, burst.
+6. Set bits 7 and 6 of DMABCRL to start. Wait while bit 6 is set.
+7. OR 11 into DRAMCR. The word in on-chip RAM is the row: the last of 12
+   back-to-back reads of the same address.
+
+The destination must be on-chip RAM, so that no other address appears on
+the external bus during the burst. A read with *sel* = 0 (all rows) first
+tells cheaply whether any key is down. The same sequence in C is
+`key_read_dma` in cybiko-doom's `cybiko/hw_cybiko.c`. Its Doom Test app
+shows the single CPU read, 12 CPU reads in a row and the DMA read side by
+side.
+
 ## 7. Screen: HD66421
 
 The HD66421 is a 160×100 controller with 2 bits per pixel. It has an index
@@ -295,6 +330,14 @@ synchronous, with the baud rate from SMR and BRR.
 
 On SCI1 in async mode the boot loader prints its progress and CyOS prints
 log lines. The boot text is in [cyos.md](cyos.md#boot-sequence).
+
+**Don't write to SCI1 once the MP3 cartridge's card driver has used it.**
+The driver leaves it in clocked mode (SMR bit 7 set) with SCR = 0. On a
+real Cybiko, cybiko-doom sent its fps line there once a second. After the
+first map it could load nothing more from the card until the Cybiko was
+restarted. That the debug line caused this, and how, is a **Guess**: the
+write probably leaves TDRE clear for the driver. Only send when SCI1 is asynchronous with its transmitter on
+(SMR bit 7 clear, SCR bit 5 set).
 **Verified.** On the real machine these pins come out on the serial/USB
 connector (**Guess** for which pins).
 
