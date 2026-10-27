@@ -163,7 +163,7 @@ A native application is H8S code in a CyOS module (`main.e`) inside an
 application archive ([file-formats.md](file-formats.md)). These facts come
 from writing three of them (a Doom port, a web browser and the MXD clip
 player in [player/](player/README.md), built with the GNU H8 tools `gcc-h8300-hms`/`binutils-h8300-hms`) and running them in an
-emulator; none has run on a real Cybiko yet.
+emulator; the Doom port has since run on a real Cybiko Xtreme too.
 
 - **Calling CyOS.** A module imports kernel exports by number; CyOS's own
   applications do the same. The export numbers are in the SDK headers
@@ -203,6 +203,16 @@ emulator; none has run on a real Cybiko yet.
   CyOS's contents, switch the DTC off (DTCER) and put both back before
   calling CyOS or exiting. The Doom port keeps its stack there (about
   1.1 KB, so no deep recursion), its hot tables and its inner loops.
+- **16-bit int.** With `-ms`, gcc-h8300-hms makes `int` 16 bits, so
+  arithmetic that a PC build (32-bit `int`) gets right can overflow on the
+  Cybiko: `i * 640` with `i` up to 400 wrapped and gave the Doom port
+  wrong wall shading, and an `add.w` on a pointer in hand-written code
+  wrapped at 64 KB. Cast to `long` where products can pass 32767, and use
+  `.l` for addresses. (Found on a real Cybiko.)
+- **Memory.** Take what the program needs from CyOS (`malloc`, export 876)
+  while CyOS still runs it normally: called from a program that has moved
+  to its own stack with interrupts off, `malloc` failed (seen in an
+  emulator).
 - **Interrupts off.** A program may turn interrupts off to have the whole
   CPU; then it must kick the watchdog itself, `REG16(ffffbc) = 5a00`, and
   give CyOS its interrupts back (and its stack) to call it.

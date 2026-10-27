@@ -299,6 +299,15 @@ CyOS makes tones two ways (**Verified**):
   divided by the period (halved when toggling).
 - **Software**: flipping P15 in a loop.
 
+A program can also drive the speaker itself, as the Doom port does for
+its PC speaker sounds: TCR1 (ffffe0) = 22 (counter cleared on TGRA,
+φ/16 = 1.152 MHz), TMDR1 (ffffe1) = 0, TIOR1 (ffffe2) = 30 (TIOCB1
+toggles on a TGRB match), TGR1B (ffffea) = 0, TGR1A (ffffe8) = period
+− 1, then set bit 1 of TSTR (ffffc0). The tone is 1.152 MHz / (2 ×
+period), a square wave. Save CyOS's channel 1 registers first and put
+them back when done (**Verified** in an emulator; not yet on a real
+Cybiko).
+
 The tone is a pulse wave, and its **high time sets the loudness**: CyOS's
 melody player runs the TPU at 18.432 MHz / 8 = 2.304 MHz with the note's
 period in TGRA, and for a melody with a sound envelope it changes TGRB on
