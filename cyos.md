@@ -18,6 +18,8 @@ N, as the Cybiko SDK 2.1 headers number them (`__cyos N`).
 - [The RAM disk](#the-ram-disk)
 - [File system names](#file-system-names)
 - [Native applications](#native-applications)
+- [Libraries at run time](#libraries-at-run-time)
+- [The Classic's CyOS](#the-classics-cyos)
 - [Kernel exports](#kernel-exports)
 - [Messages and processes](#messages-and-processes)
 
@@ -238,6 +240,66 @@ emulator; the Doom port has since run on a real Cybiko Xtreme too.
   unpacked as they are read. (Verified with the clip player; this is what
   Cybiko's clip player does.)
 
+## Libraries at run time
+
+A module names the libraries it imports from (the names list of
+[`main.e`](file-formats.md#cyos-modules-maine)), and `root.inf` names the
+ones an application needs. CyOS won't start an application when one of
+them is missing: "Error. Necessary components are not found. Delete the
+application and download it again." (seen on the Classic with a clip that
+names `sound.dl`). A library that is only there on some Cybikos is loaded
+at run time instead:
+
+- **Export 843** `(holder, name)` loads a library by its file name (or
+  finds it loaded) and counts a use: the holder is a 4-byte object
+  (`malloc(4)`, set to 0) that receives the library's module, or stays 0
+  when there is no such library (no message). "ordinals" and "CyOS" give
+  the kernel. CyOS's bytecode interpreter (`bytecode.dl`, in the SDK) loads
+  the libraries of bytecode programs this way.
+- The module's **table of exports** is the pointer at +5c of the module:
+  export N is the 32-bit address at table + 4N, called like an import.
+- **Export 1260** `(holder, 3)` lets the library go (counts the use back)
+  and frees the holder.
+
+The same numbers on the Xtreme (CyOS 1.5.08) and the Classic (CyOS 1.2.57).
+(**Verified** in an emulator: the [clip player for both
+models](player/README.md#classic--xtreme-experimental) finds `MP3.dl` on a
+Classic and `sound.dl` on an Xtreme, and gets 0 for the other.) Found from
+CyOS's kernel: its export table (in RAM, 200000 + 26d8 on the Classic's
+1.2.57, 48412a on the Xtreme's 1.5.08) has at 843 the function that
+compares the name with "ordinals" and "CyOS" before it looks for the file.
+
+## The Classic's CyOS
+
+The Cybiko Classic (H8S/2241 at 11 MHz, 512 KB RAM, CyOS 1.2 in a serial
+DataFlash, the same 160 x 100 four-grey screen) runs the same kind of
+application as the Xtreme:
+
+- the same archive (`Cy`) and module (`91af`) formats, with `main.e`,
+  `root.inf` and `0.ico` (seen in the Classic's `MP3.app`, `MP3.dl`,
+  `mp3_control.dl` and HyperDev's `hypercomm.app`);
+- the same kernel export numbers for what both have (the current thread
+  124, the "cool" fonts 468/469, `Thread_start` 1175, `Process_request_focus`
+  1034, `SystemThread_pause` 939, `sprintf` 1170, `strlen` 1212 and the
+  others the clip player uses), and `CyWin.dl` with `cWinApp_ctor` 324 and
+  the same object layout: the clip player for both models runs unchanged
+  on CyOS 1.2.57 (**verified** in an emulator);
+- `argv[0]` is the application's name without `.app` (`probe` for
+  `probe.app`);
+- the time (export 450) counts in 0.1 ms, as on the Xtreme;
+- an application on the MP3 player's SmartMedia card (`SMC`) runs from
+  there, CyOS reading it through the player's software (`MP3.dl`); the
+  desktop shows them in its SMC folder;
+- the `root.inf` CyOS version: the Classic says "This program requires at
+  least version X.X.n of CyOS" and compares only the last number; the
+  Xtreme asks "You are going to run an application for the previous
+  version of Cybiko computer" for one older than 1.5 (seen with 1.2.46), so
+  an application for both asks for 1.5.1.
+
+Classic programs and Xtreme programs still don't run on each other's
+machine when they import what the other doesn't have (the Classic's
+applications import `locales.dl`, `MP3.dl`; the Xtreme's `sound.dl`).
+
 ## Kernel exports
 
 Numbers used by the native applications above (from the SDK headers unless
@@ -274,6 +336,7 @@ noted):
 | 739 | `Graphics_string_width_Ex` |
 | 757 | `Message_has_buffer(m)` |
 | 758 | `Process_has_focus` |
+| 843 | `(holder, name)`: load a library by name ([above](#libraries-at-run-time)); not in the headers |
 | 851 | `Buffer_load(b, data, offset, length)` |
 | 876 | `malloc` |
 | 891, 892 | the "mini" font, bold and normal (9 dots high) |
@@ -293,6 +356,7 @@ noted):
 | 1175 | `Thread_start(thread, 0)` |
 | 1196 | `Buffer_store(b, data, offset, length)` |
 | 1212 | `strlen` |
+| 1260 | `(holder, 3)`: let a library from 843 go and free the holder; not in the headers |
 | 1340 | the best gate's ID, 0 if none ([cywig.md](cywig.md#2-finding-the-gate)) |
 
 The radio's exports (channels, people around, pings) are listed where they

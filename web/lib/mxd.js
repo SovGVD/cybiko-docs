@@ -66,15 +66,18 @@
     return U.concat([new Uint8Array([2, 1, ICON_W, ICON_H, 0, 0, ICON_W, ICON_H]), pix]);
   };
 
-  X.rootInf = function (name) {
-    const lines = ["root", name + " ", "", "", "sound.dl", "", "Video clip", "21.1.1", "1.5.1", "sound.dl<21.1.1>"];
+  // both: the player for both models (Classic and Xtreme), which names no
+  // library (it asks CyOS for sound.dl or MP3.dl itself).
+  X.rootInf = function (name, both) {
+    const lines = both ? ["root", name + " ", "", "", "", "", "Video clip", "1.0.0", "1.5.1", ""]
+      : ["root", name + " ", "", "", "sound.dl", "", "Video clip", "21.1.1", "1.5.1", "sound.dl<21.1.1>"];
     return U.toLatin1(lines.join("\r\n") + "\r\n", true);
   };
 
   // A free clip player (player/ in this repository), from lib/mxdplayer.js:
-  // "simple" or "controls".
+  // "simple", "controls" or "both" (Classic + Xtreme, experimental).
   X.freePlayer = function (kind) {
-    const b64 = kind === "controls" ? C.mxdPlayerControls : C.mxdPlayer;
+    const b64 = kind === "controls" ? C.mxdPlayerControls : kind === "both" ? C.mxdPlayerBoth : C.mxdPlayer;
     if (!b64) throw new Error("lib/mxdplayer.js is not loaded");
     const s = atob(b64), b = new Uint8Array(s.length);
     for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
@@ -119,19 +122,39 @@
   }
 
   // The clip: frames are 160x100 arrays of 0-255 greys.
-  X.build = function ({ frames, music, player, name, fps, dither, gamma }) {
+  X.build = function ({ frames, music, player, name, fps, dither, gamma, both }) {
     const period = U.round(10000 / fps);
     const pic = new U.Buf().u16be(period).u8(W).u8(H);
     for (const f of frames) pic.bytes([0, 0, W, H]).bytes(X.pack2bpp(X.toLevels(f, W, H, dither, gamma), W, H));
     const icon = X.makeIcon(frames[Math.floor(frames.length / 3)], dither, gamma);
-    return C.cap.cyArchive([
-      ...(music && music.length ? [{ name: "music.mp3", data: music, compress: false }] : []),
+    const rest = [
       { name: "clip.pic", data: pic.done(), compress: true },
       { name: "main.e", data: player, compress: true },
-      { name: "root.inf", data: X.rootInf(name), compress: true },
+      { name: "root.inf", data: X.rootInf(name, both), compress: true },
       { name: "0.ico", data: icon, compress: false },
+    ];
+    if (both && music && music.length) return bothArchive(music, rest);
+    return C.cap.cyArchive([
+      ...(music && music.length ? [{ name: "music.mp3", data: music, compress: false }] : []),
+      ...rest,
     ]);
   };
+
+  // For the player for both models: music.mp3's data starts on a 512-byte
+  // block of the file (the Classic's MP3 player plays the clip's own file
+  // from a block) and music.ofs (u32) says where; music.pad takes up the room.
+  function bothArchive(music, rest) {
+    const names = ["music.pad", "music.mp3", "music.ofs", ...rest.map(r => r.name)];
+    const dataStart = 6 + 10 * names.length + names.reduce((n, s) => n + s.length + 1, 0);
+    const pad = (512 - (dataStart + 2) % 512) % 512;
+    const ofs = dataStart + 1 + pad + 1;
+    return C.cap.cyArchive([
+      { name: "music.pad", data: new Uint8Array(pad), compress: false },
+      { name: "music.mp3", data: music, compress: false },
+      { name: "music.ofs", data: new Uint8Array([ofs >>> 24, (ofs >>> 16) & 255, (ofs >>> 8) & 255, ofs & 255]), compress: false },
+      ...rest,
+    ]);
+  }
 
   // A clip's frames (2-bit levels, w x h each), frame rate and sound.
   X.parse = function (blob) {

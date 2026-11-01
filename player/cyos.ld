@@ -22,6 +22,10 @@ _cy_Graphics_draw_text = 0xf00000 + 532;
 _cy_cool_normal_font = 0xf00000 + 469;
 _cy_mini_normal_font = 0xf00000 + 892;
 _cy_strcmp = 0xf00000 + 1208;
+_cy_malloc = 0xf00000 + 876;
+_cy_module_get = 0xf00000 + 843;           /* (holder, name): loads a library by name; *holder
+                                            * = its module (0 if there is none); same on both models */
+_cy_holder_release = 0xf00000 + 1260;      /* (holder, 3): lets the library go, frees the holder */
 /* CyWin.dl */
 _cy_cWinApp_ctor = 0xf10000 + 324;         /* (app, name, stack size) */
 /* sound.dl (the MP3 cartridge's sound library) */

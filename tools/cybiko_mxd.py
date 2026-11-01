@@ -21,9 +21,16 @@ pass one of the clips on the MP3 cartridge CD (flavor.app, free.app and the
 others all carry the same one) as --template. Any of them needs the
 cartridge's software (sound.dl) on the Cybiko.
 
+--player both (experimental, cybiko_mxd_player_both.e) makes one clip for
+both models: on the Xtreme it plays like the simple one, and on the Cybiko
+Classic through the Classic's MP3 player (its software, MP3.dl, installed,
+and the clip on the player's SmartMedia card). Its archive has music.mp3 on
+a 512-byte block of the file and that offset in music.ofs.
+
 Options:
-    --player KIND     "simple" (default) or "controls" (Space pauses,
-                      Left/Right seek, Up/Down volume)
+    --player KIND     "simple" (default), "controls" (Space pauses,
+                      Left/Right seek, Up/Down volume) or "both" (Classic
+                      + Xtreme, experimental)
     --template CLIP   take Cybiko's player (main.e) from this CD clip
     --name TEXT       the name under the desktop icon (default: OUT's name)
     --fps N           frames a second, 1-5 (default 5, as on the CD; the
@@ -162,19 +169,44 @@ def make_icon(frame, dither, gamma):
     return bytes([2, 1, ICON_W, ICON_H, 0, 0, ICON_W, ICON_H]) + pix
 
 
-def root_inf(name):
-    lines = ["root", name + " ", "", "", "sound.dl", "", "Video clip", "21.1.1", "1.5.1",
-             "sound.dl<21.1.1>"]
+def root_inf(name, both=False):
+    if both:
+        # the player for both models needs no library to start: it asks
+        # CyOS for sound.dl or MP3.dl itself. CyOS 1.5.1 as on the CD's
+        # clips: the Xtreme asks before it runs anything older ("an
+        # application for the previous version"), and the Classic (CyOS
+        # 1.2.46-1.2.57) compares only the last number.
+        lines = ["root", name + " ", "", "", "", "", "Video clip", "1.0.0", "1.5.1", ""]
+    else:
+        lines = ["root", name + " ", "", "", "sound.dl", "", "Video clip", "21.1.1", "1.5.1",
+                 "sound.dl<21.1.1>"]
     return ("\r\n".join(lines) + "\r\n").encode("latin-1", errors="replace")
 
 
 def free_player(kind):
-    name = "cybiko_mxd_player.e" if kind == "simple" else "cybiko_mxd_player_controls.e"
+    name = {"simple": "cybiko_mxd_player.e", "controls": "cybiko_mxd_player_controls.e",
+            "both": "cybiko_mxd_player_both.e"}[kind]
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
     try:
         return open(path, "rb").read()
     except OSError:
         sys.exit("%s is missing: take it from cybiko-docs' tools/ or pass --template" % path)
+
+
+def both_archive(music, rest):
+    """The archive for the player for both models: music.mp3's data starts
+    on a 512-byte block of the file, because the Classic's MP3 player plays
+    the clip's own file from a block, and music.ofs (u32) says where. A
+    stored part music.pad before it takes up the room."""
+    names = ["music.pad", "music.mp3", "music.ofs"] + [r[0] for r in rest]
+    data_start = 6 + 10 * len(names) + sum(len(n) + 1 for n in names)
+    pad = -(data_start + 1 + 1) % 512        # music.pad's method byte, music's method byte
+    ofs = data_start + 1 + pad + 1
+    parts = [("music.pad", bytes(pad), False), ("music.mp3", music, False),
+             ("music.ofs", ofs.to_bytes(4, "big"), False)] + rest
+    archive = cybiko_cap.cy_archive(parts)
+    assert ofs % 512 == 0 and archive[ofs:ofs + len(music)] == music
+    return archive
 
 
 def template_player(path):
@@ -242,7 +274,7 @@ def main():
     p.add_argument("video")
     p.add_argument("out")
     p.add_argument("--template")
-    p.add_argument("--player", choices=("simple", "controls"), default="simple")
+    p.add_argument("--player", choices=("simple", "controls", "both"), default="simple")
     p.add_argument("--name")
     p.add_argument("--fps", type=float, default=5.0)
     p.add_argument("--start", type=float)
@@ -272,13 +304,18 @@ def main():
     icon = make_icon(frames[len(frames) // 3], a.dither, a.gamma)
 
     print("compressing...      ")
-    parts = [("music.mp3", music, False)] if music else []
-    archive = cybiko_cap.cy_archive(parts + [
+    both = a.player == "both" and not a.template
+    rest = [
         ("clip.pic", bytes(pic), True),
         ("main.e", player, True),
-        ("root.inf", root_inf(name), True),
+        ("root.inf", root_inf(name, both), True),
         ("0.ico", icon, False),
-    ])
+    ]
+    if both and music:
+        archive = both_archive(music, rest)
+    else:
+        parts = [("music.mp3", music, False)] if music else []
+        archive = cybiko_cap.cy_archive(parts + rest)
 
     with open(a.out, "wb") as f:
         f.write(archive)

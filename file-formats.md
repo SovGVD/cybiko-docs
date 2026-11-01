@@ -175,6 +175,17 @@ Video clip        <- the application type shown in File Manager
 sound.dl<21.1.1>
 ```
 
+The other fields, from the Classic's applications and libraries too
+(`MP3.app` has `MP3.dl mp3_control.dl` on line 5, `1.3.13` and `1.2.56` on
+lines 8 and 9, `MP3.dl<1.1.7> mp3_control.dl<1.1.3>` on line 10; a
+library's first line is `lib`): line 5 lists the libraries the application
+needs, line 8 is its own version, line 9 the CyOS version it needs, line 10
+the libraries again with their versions. CyOS refuses to start an
+application whose libraries are not there ("Necessary components are not
+found"); an application for both models lists none
+([cyos.md](cyos.md#libraries-at-run-time)) and asks for CyOS 1.5.1
+([cyos.md](cyos.md#the-classics-cyos) says why).
+
 The first line is where the application shows up: `root` puts it on the
 main desktop, `app` and `game` in those folders (**Verified** with native
 apps; the Xtreme's WAP browser 21.1.17 needs the first line set to `root`,
@@ -212,7 +223,11 @@ A fixup record is a type byte and a 24-bit offset into the image:
   (`jsr @N` with a type 80 fixup). Library 0 is the kernel ("ordinals"),
   the others are named in the names list (for example `CyWin.dl`).
 
-The export numbers are in [cyos.md](cyos.md#kernel-exports).
+The export numbers are in [cyos.md](cyos.md#kernel-exports). CyOS loads
+every library in the names list before it starts the module, and refuses to
+start it when one is missing, so the list should hold only the libraries
+the module imports from (`player/mkmodule.py` does that). The Classic's
+modules are the same format.
 
 ## CyOS update images (`.boot`)
 
@@ -467,6 +482,7 @@ emulator.)
 | `main.e` | 2 | the player program: on the CD 4311 bytes, the same in every clip |
 | `root.inf` | 2 | the application's description (above) |
 | `0.ico` | 0 or 2 | the desktop icon (above) |
+| `music.pad`, `music.ofs` | 0 | only in clips for both models (below) |
 
 **`music.mp3`** is an MP3 stream that the cartridge decodes. The CD's clips
 use 128 kbps 44.1 kHz stereo, or 64 kbps 22.05 kHz mono (`free.app`). An ID3
@@ -510,6 +526,14 @@ also pauses, seeks and changes the volume, so new clips don't need a CD
 file; the [tools](tools/README.md#cybiko_mxdpy-mxd-video-clips) use one of
 them unless given a CD clip as a template. (**Verified** in an emulator: the
 same frames at the same times and the same sound as the CD's player.)
+
+**For both models** (the free player `both`, experimental; see
+[player/](player/README.md#classic--xtreme-experimental)): the archive
+also has `music.pad` (stored, zeros) before `music.mp3`, sized so that
+`music.mp3`'s data (after its method byte) starts on a 512-byte block of
+the file, and `music.ofs`, a big-endian u32 with that offset. The Classic's
+MP3 player is told to play the clip's own file from that block. `root.inf`
+lists no library. Players that don't know these parts ignore them.
 
 **Smaller frames.** A frame can be smaller than the screen: its x, y,
 width and height place it, rows padded to whole bytes, over what the
