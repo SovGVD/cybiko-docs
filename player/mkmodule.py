@@ -91,10 +91,14 @@ def module(at0, at1, entry):
     bss = syms["__bss_end"] - syms["__bss_start"]
     if syms1["__bss_end"] - syms1["__bss_start"] != bss or len(a) < syms["__image_end"]:
         sys.exit("unexpected layout; link with player/link.ld")
-    names = b"".join(n.encode() + b"\0" for n in LIBS)
     fx = fixups(a, b)
     a, calls = imports(a, b, {off for _, off in fx})
-    fx += [(0x80 + lib, off) for lib, off in calls]
+    # Only the libraries the program uses go in the list: CyOS refuses to
+    # start a module whose list names a library it doesn't have (a player
+    # for both models must not name sound.dl, which the Classic lacks).
+    used = [0] + sorted({lib for lib, _ in calls} - {0})
+    names = b"".join(LIBS[k].encode() + b"\0" for k in used)
+    fx += [(0x80 + used.index(lib), off) for lib, off in calls]
     recs = b"".join(struct.pack(">I", t << 24 | off) for t, off in sorted(fx, key=lambda r: r[1]))
     head = struct.pack(">HHIIIIII16x", 0x91AF, 2, len(a), bss, 0, len(names), len(recs), syms[entry])
     return head + a + names + recs

@@ -655,7 +655,8 @@
         : o.audio === "none" ? null : await videoSound(video, o);
       status.textContent = "Compressing...";
       await new Promise(r => setTimeout(r, 30));
-      const clip = C.mxd.build({ frames, music, player, name, fps: o.fps, dither: o.dither, gamma: o.gamma });
+      const clip = C.mxd.build({ frames, music, player, name, fps: o.fps, dither: o.dither, gamma: o.gamma,
+        both: $("mk-player").value === "both" });
       const file = name.replace(/[\\/:*?"<>|]/g, "_") + ".app";
       put(out, el("p", {}, file + ": " + frames.length + " frames, " + U.fixed(frames.length / o.fps, 1) + " s, " +
         Math.round(clip.length / 1024) + " KB"),

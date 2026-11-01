@@ -394,7 +394,9 @@ async function testMxd() {
   for (const o of [{ fit: "crop", dither: "fs", gamma: 1.0, fps: 5 }, { fit: "pad-white", dither: "bayer", gamma: 0.8, fps: 3 },
     { fit: "pad-black", dither: "fs", gamma: 1.0, fps: 4, audio: "none" },
     { fit: "crop", dither: "none", gamma: 1.2, fps: 2, free: "simple" },
-    { fit: "crop", dither: "fs", gamma: 1.0, fps: 5, free: "controls" }]) {
+    { fit: "crop", dither: "fs", gamma: 1.0, fps: 5, free: "controls" },
+    { fit: "crop", dither: "fs", gamma: 1.0, fps: 5, free: "both" },
+    { fit: "crop", dither: "fs", gamma: 1.0, fps: 5, free: "both", audio: "none" }]) {
     // free: one of the free players (no --template), which both carry
     const what = "mxd " + JSON.stringify(o);
     py("cybiko_mxd.py", [video, out, ...(o.free ? ["--player", o.free] : ["--template", tpl]), "--name", "Test clip", "--fps", String(o.fps),
@@ -411,7 +413,7 @@ async function testMxd() {
       const music = o.audio === "none" ? new Uint8Array(0) : execFileSync("ffmpeg", ["-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", "22050", "-b:a", "64k",
         "-c:a", "libmp3lame", "-map_metadata", "-1", "-id3v2_version", "0", "-write_xing", "0", "-f", "mp3", "-"]);
       const js = C.mxd.build({ frames, music: C.mxd.plainMp3(new Uint8Array(music)), player: o.free ? C.mxd.freePlayer(o.free) : C.mxd.templatePlayer(read(tpl)),
-        name: "Test clip", fps: o.fps, dither: o.dither, gamma: o.gamma });
+        name: "Test clip", fps: o.fps, dither: o.dither, gamma: o.gamma, both: o.free === "both" });
       checkBytes(what, js, out);
       const clip = C.mxd.parse(js);
       check(what + " parse", clip.frames.length === frames.length && same(clip.music || new Uint8Array(0), music), "frames or sound differ");

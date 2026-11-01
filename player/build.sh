@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 out=build/player
 mkdir -p $out
 h8300-hitachi-coff-as player/rt.s -o $out/rt.o
-for name in simple controls; do
+for name in simple controls both; do
     h8300-hitachi-coff-gcc -ms -Os -fomit-frame-pointer -Wall -Wextra -ffreestanding -fno-builtin \
         -c player/$name.c -o $out/$name.o
     for base in 0 0x10000; do
@@ -20,6 +20,7 @@ for name in simple controls; do
 done
 cp $out/simple.e tools/cybiko_mxd_player.e
 cp $out/controls.e tools/cybiko_mxd_player_controls.e
+cp $out/both.e tools/cybiko_mxd_player_both.e
 python3 - <<'PY'
 import base64
 def b64(name):
@@ -31,5 +32,6 @@ open("web/lib/mxdplayer.js", "w").write(
     "(function (C) {\n  \"use strict\";\n"
     "  C.mxdPlayer = \"\" +\n" + b64("simple") + ";\n"
     "  C.mxdPlayerControls = \"\" +\n" + b64("controls") + ";\n"
+    "  C.mxdPlayerBoth = \"\" +\n" + b64("both") + ";\n"
     "})(globalThis.Cybiko = globalThis.Cybiko || {});\n")
 PY

@@ -224,7 +224,11 @@ from [player/](../player/README.md) (`cybiko_mxd_player*.e`, which must stay
 next to the script): the simple one, or with `--player controls` the one
 with pause, seek and volume keys. `--template` takes Cybiko's own from one
 of the CD's clips (`flavor.app`, `free.app`, ...) instead. Any of them needs
-the MP3 cartridge's software on the Cybiko. Options: `--name` (the desktop name), `--fps 1-5`,
+the MP3 cartridge's software on the Cybiko. `--player both` (experimental)
+makes a clip that also plays on the Cybiko Classic, through its MP3 player
+(CY65P10), from the player's SmartMedia card; see
+[player/](../player/README.md#classic--xtreme-experimental). If it doesn't
+work, make the clip again without it. Options: `--name` (the desktop name), `--fps 1-5`,
 `--start S`, `--duration S`, `--fit crop|pad-white|pad-black` (bars in
 white or black; `pad` is `pad-white`), `--dither fs|bayer|none`,
 `--audio small|hifi|none` (none: a silent clip), `--gamma G`. Needs ffmpeg with libmp3lame.
@@ -232,6 +236,7 @@ white or black; `pad` is `pad-white`), `--dither fs|bayer|none`,
 ```sh
 python3 cybiko_mxd.py trailer.mp4 trailer.app --duration 30
 python3 cybiko_mxd.py trailer.mp4 trailer.app --template flavor.app
+python3 cybiko_mxd.py trailer.mp4 trailer.app --player both
 python3 cybiko_mxd.py flavor.app flavor.mp4
 ```
 

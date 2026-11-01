@@ -146,7 +146,10 @@ a video with ffmpeg instead.)
 clip's player program (`main.e`) is one of the free ones from
 [player/](../player/README.md): *the free player, simple* (the default) or
 *with controls* (`--player controls`: Space pauses, Left and Right seek,
-Up and Down change the volume). *Cybiko's, from a CD clip* takes
+Up and Down change the volume) or *for Classic + Xtreme* (`--player both`,
+experimental: the same clip also plays on the Cybiko Classic through its MP3
+player, see [player/](../player/README.md#classic--xtreme-experimental)).
+*Cybiko's, from a CD clip* takes
 Cybiko's own from one of the MP3 cartridge CD's clips (`flavor.app`,
 `free.app`...) instead, like the Python tool's `--template`. The options are
 the tool's: *Name* (`--name`, the desktop name; default the video's file name),

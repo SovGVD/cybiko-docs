@@ -191,14 +191,18 @@ end
   <h3>Make a clip</h3>
   <p>The clip's player program (<code>main.e</code>) is one of the free ones made for these tools: the simple one, or
     the one with controls (Space pauses, Left and Right seek 5 s, Up and Down change the volume); or take Cybiko's own
-    from one of the clips on the MP3 cartridge CD (<code>flavor.app</code>, <code>free.app</code>...). Both need the
-    cartridge's software on the Cybiko. The picture comes from the browser's video decoder, so it can differ
+    from one of the clips on the MP3 cartridge CD (<code>flavor.app</code>, <code>free.app</code>...). These need the
+    cartridge's software on the Cybiko. The player for <b>Classic + Xtreme</b> (experimental) plays the same clip on
+    both: on the Xtreme like the simple one, and on the Classic through its MP3 player (CY65P10), whose software
+    (<code>MP3.dl</code>) must be installed and whose SmartMedia card must hold the clip. If it doesn't work, make the
+    clip again with the simple player. The picture comes from the browser's video decoder, so it can differ
     slightly from the Python tool's (which uses ffmpeg); the rest is the same.</p>
   <div class="row">
     <div class="drop small" data-for="mk-video"><input type="file" id="mk-video" accept="video/*,audio/*"><span>Video</span></div>
     <label>Player <select id="mk-player">
       <option value="simple">the free player, simple</option>
       <option value="controls">the free player with controls</option>
+      <option value="both">the free player for Classic + Xtreme (experimental)</option>
       <option value="template">Cybiko's, from a CD clip</option>
     </select></label>
     <div class="drop small" data-for="mk-template" id="mk-template-box" hidden><input type="file" id="mk-template" accept=".app"><span>Clip from the CD</span></div>
